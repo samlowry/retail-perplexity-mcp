@@ -1,0 +1,6 @@
+{
+  "brokerHost": "127.0.0.1",
+  "brokerPort": 3317,
+  "defaultTimeoutMs": 180000,
+  "concurrentRequestPolicy": "reject"
+}

@@ -1,0 +1,28 @@
+{
+  "name": "perplexity-desktop-broker",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local desktop broker for Perplexity web UI via Playwright",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "pnpm -r run build",
+    "dev:broker": "pnpm --filter @pdb/broker dev",
+    "dev:mcp": "pnpm --filter @pdb/mcp-server dev",
+    "doctor": "pnpm --filter @pdb/doctor start",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "smoke:worker": "pnpm --filter @pdb/playwright-worker smoke",
+    "typecheck": "pnpm -r run typecheck"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.29",
+    "tsx": "^4.19.4",
+    "typescript": "6.0.3",
+    "vitest": "4.1.6"
+  },
+  "packageManager": "pnpm@10.11.0"
+}

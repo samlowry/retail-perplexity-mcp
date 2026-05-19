@@ -1,0 +1,31 @@
+{
+  "name": "@pdb/playwright-worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "smoke": "tsx scripts/smoke-send.ts"
+  },
+  "dependencies": {
+    "@pdb/types": "workspace:*",
+    "@pdb/ui-selectors": "workspace:*",
+    "@pdb/ui-state": "workspace:*",
+    "playwright": "1.60.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.29",
+    "dotenv": "^16.5.0",
+    "tsx": "^4.19.4",
+    "typescript": "6.0.3"
+  }
+}

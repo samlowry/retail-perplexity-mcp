@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "perplexity-broker": {
+      "command": "pnpm",
+      "args": ["--filter", "@pdb/mcp-server", "dev"],
+      "env": {
+        "BROKER_HOST": "127.0.0.1",
+        "BROKER_PORT": "3317"
+      }
+    }
+  }
+}
