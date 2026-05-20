@@ -44,6 +44,8 @@ See [docs/BACKLOG.md](docs/BACKLOG.md) and [.cursor/skills/perplexity-desktop-br
 
 See [docs/mcp-cursor-setup.md](docs/mcp-cursor-setup.md). Example config: [.cursor/mcp.json](.cursor/mcp.json).
 
+Agents use a single MCP tool, **`perplexity_ask`** (`question`, optional `new_chat`, `timeout_seconds`, `format`). The broker HTTP API is unchanged for doctor/dev workflows.
+
 ## Scripts
 
 | Script | Description |

@@ -19,4 +19,24 @@
 }
 ```
 
-3. Restart Cursor and verify tools: `perplexity_health`, `perplexity_send_prompt`, etc.
+3. Restart Cursor and verify the single MCP tool: `perplexity_ask`.
+
+## Agent tool: `perplexity_ask`
+
+The MCP server exposes one tool for agents. Session bootstrap (`/session/ensure`), health checks, and chat send are handled internally; `session_id` is always `default` and is not exposed.
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `question` | string | (required) | Prompt text |
+| `new_chat` | boolean | `false` | Start a new Perplexity thread before sending |
+| `timeout_seconds` | number | `180` | Max wait for the answer |
+| `format` | `markdown` \| `text` | `markdown` | Answer format |
+
+Response is JSON in the tool text content:
+
+- Success: `{ "ok": true, "answer": "...", "sources": [...], "timings_ms": { ... } }`
+- Failure: `{ "ok": false, "code": "...", "message": "..." }`
+
+Agent-facing error codes: `NEEDS_LOGIN`, `BROKER_OFFLINE`, `BUSY`, `TIMEOUT`, `FAILED`.
+
+HTTP routes (`/health`, `/session/ensure`, `/chat/send`, etc.) remain on the broker for doctor and development; only the MCP surface is simplified.

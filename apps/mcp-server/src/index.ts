@@ -1,7 +1,36 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { brokerFetch } from "./broker-client.js";
+import {
+  BrokerNetworkError,
+  BrokerRequestError,
+  brokerFetch,
+  brokerHealth,
+  formatAnswer,
+  formatTimingsMs,
+  parseBrokerErrorBody,
+  toAgentErrorCode,
+  type ChatSendSuccess,
+} from "./broker-client.js";
+
+const SESSION_ID = "default";
+
+type AgentSuccess = {
+  ok: true;
+  answer: string;
+  sources?: ChatSendSuccess["answer"]["sources"];
+  timings_ms?: Record<string, number>;
+};
+
+type AgentFailure = {
+  ok: false;
+  code: string;
+  message: string;
+};
+
+function agentJsonContent(payload: AgentSuccess | AgentFailure) {
+  return { content: [{ type: "text" as const, text: JSON.stringify(payload) }] };
+}
 
 const server = new McpServer({
   name: "perplexity-desktop-broker",
@@ -9,111 +38,75 @@ const server = new McpServer({
 });
 
 server.tool(
-  "perplexity_ensure_session",
-  "Ensure Perplexity browser session is ready (manual login required once).",
-  { session_id: z.string().default("default") },
-  async ({ session_id }) => {
-    const result = await brokerFetch<unknown>("/session/ensure", {
-      method: "POST",
-      body: JSON.stringify({ sessionId: session_id }),
-    });
-    return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
-  },
-);
-
-server.tool(
-  "perplexity_new_thread",
-  "Start a new Perplexity chat thread.",
-  { session_id: z.string().default("default") },
-  async ({ session_id }) => {
-    const result = await brokerFetch<unknown>("/thread/new", {
-      method: "POST",
-      body: JSON.stringify({ sessionId: session_id }),
-    });
-    return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
-  },
-);
-
-server.tool(
-  "perplexity_send_prompt",
-  "Send a prompt and wait for the final answer.",
+  "perplexity_ask",
+  "Ask Perplexity a question. Browser session bootstrap and login checks run automatically.",
   {
-    session_id: z.string().default("default"),
-    text: z.string(),
-    new_thread: z.boolean().optional(),
-    timeout_ms: z.number().optional(),
-    response_format: z
-      .enum(["text", "markdown", "html_fragment", "json_best_effort"])
-      .optional(),
+    question: z.string().min(1),
+    new_chat: z.boolean().optional().default(false),
+    timeout_seconds: z.number().positive().optional().default(180),
+    format: z.enum(["markdown", "text"]).optional().default("markdown"),
   },
-  async ({ session_id, text, new_thread, timeout_ms, response_format }) => {
-    const result = await brokerFetch<unknown>("/chat/send", {
-      method: "POST",
-      body: JSON.stringify({
-        sessionId: session_id,
-        text,
-        newThread: new_thread,
-        timeoutMs: timeout_ms,
-        wait: true,
-        responseFormat: response_format ?? "markdown",
-      }),
-    });
-    return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+  async ({ question, new_chat, timeout_seconds, format }) => {
+    const healthy = await brokerHealth();
+    if (!healthy) {
+      return agentJsonContent({
+        ok: false,
+        code: "BROKER_OFFLINE",
+        message: "Broker is not reachable or /health reported down. Start with pnpm dev:broker.",
+      });
+    }
+
+    try {
+      const result = await brokerFetch<ChatSendSuccess>("/chat/send", {
+        method: "POST",
+        body: JSON.stringify({
+          sessionId: SESSION_ID,
+          text: question,
+          newThread: new_chat,
+          timeoutMs: timeout_seconds * 1000,
+          wait: true,
+          responseFormat: format,
+        }),
+      });
+
+      const success: AgentSuccess = {
+        ok: true,
+        answer: formatAnswer(result.answer, format),
+        sources: result.answer.sources?.length ? result.answer.sources : undefined,
+        timings_ms: formatTimingsMs(result.answer.timings),
+      };
+      return agentJsonContent(success);
+    } catch (error) {
+      if (error instanceof BrokerNetworkError) {
+        return agentJsonContent({
+          ok: false,
+          code: "BROKER_OFFLINE",
+          message: error.message,
+        });
+      }
+
+      if (error instanceof BrokerRequestError) {
+        const brokerError = parseBrokerErrorBody(error.body);
+        const code = toAgentErrorCode(brokerError?.code);
+        const message =
+          brokerError?.message ??
+          (typeof error.body === "object" &&
+          error.body !== null &&
+          "message" in error.body &&
+          typeof (error.body as { message: unknown }).message === "string"
+            ? (error.body as { message: string }).message
+            : "Request failed");
+        return agentJsonContent({ ok: false, code, message });
+      }
+
+      return agentJsonContent({
+        ok: false,
+        code: "FAILED",
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
   },
 );
-
-server.tool(
-  "perplexity_get_last_answer",
-  "Get last answer from current thread (runs send with empty check via broker).",
-  {
-    session_id: z.string().default("default"),
-    response_format: z
-      .enum(["text", "markdown", "html_fragment", "json_best_effort"])
-      .optional(),
-  },
-  async () => ({
-    content: [
-      {
-        type: "text",
-        text: "Use perplexity_send_prompt; dedicated get_last_answer HTTP route is not exposed in MVP.",
-      },
-    ],
-  }),
-);
-
-server.tool(
-  "perplexity_cancel",
-  "Cancel in-flight generation.",
-  { session_id: z.string().default("default") },
-  async ({ session_id }) => {
-    const result = await brokerFetch<unknown>("/chat/cancel", {
-      method: "POST",
-      body: JSON.stringify({ sessionId: session_id }),
-    });
-    return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
-  },
-);
-
-server.tool(
-  "perplexity_upload_file",
-  "Upload a file to the current chat.",
-  {
-    session_id: z.string().default("default"),
-    file_path: z.string(),
-  },
-  async ({ session_id, file_path }) => {
-    const result = await brokerFetch<unknown>("/attachment/upload", {
-      method: "POST",
-      body: JSON.stringify({ sessionId: session_id, filePath: file_path }),
-    });
-    return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
-  },
-);
-
-server.tool("perplexity_health", "Broker and browser health.", {}, async () => {
-  const result = await brokerFetch<unknown>("/health");
-  return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
-});
 
 async function main(): Promise<void> {
   const transport = new StdioServerTransport();

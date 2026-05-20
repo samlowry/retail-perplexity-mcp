@@ -94,6 +94,8 @@ export class BrokerService {
       this.jobs.updateStatus(job.jobId, JobStatus.RUNNING);
 
       const result = await this.lock.runExclusive(request.sessionId, async () => {
+        const session = await this.worker.ensureSession();
+        if (session.error) return session.error;
         return this.worker.sendPromptAndWait(request.text, {
           newThread: request.newThread,
           timeoutMs: request.timeoutMs,
@@ -113,11 +115,7 @@ export class BrokerService {
       });
       return { jobId: job.jobId, answer: result as ChatAnswerResult };
     } catch (error) {
-      const brokerError: BrokerError = {
-        ok: false,
-        code: BrokerErrorCode.INTERNAL_ERROR,
-        message: error instanceof Error ? error.message : String(error),
-      };
+      const brokerError = this.errorFromThrown(error);
       this.jobs.patch(job.jobId, { status: JobStatus.FAILED, error: brokerError });
       return { jobId: job.jobId, error: brokerError };
     }
@@ -155,13 +153,15 @@ export class BrokerService {
   private async runSendJob(jobId: string, request: ChatSendRequest): Promise<void> {
     try {
       this.jobs.updateStatus(jobId, JobStatus.RUNNING);
-      const result = await this.lock.runExclusive(request.sessionId, async () =>
-        this.worker.sendPromptAndWait(request.text, {
+      const result = await this.lock.runExclusive(request.sessionId, async () => {
+        const session = await this.worker.ensureSession();
+        if (session.error) return session.error;
+        return this.worker.sendPromptAndWait(request.text, {
           newThread: request.newThread,
           timeoutMs: request.timeoutMs,
           responseFormat: request.responseFormat,
-        }),
-      );
+        });
+      });
       if ("ok" in result && result.ok === false) {
         this.jobs.patch(jobId, { status: JobStatus.FAILED, error: result });
         return;
@@ -174,12 +174,23 @@ export class BrokerService {
     } catch (error) {
       this.jobs.patch(jobId, {
         status: JobStatus.FAILED,
-        error: {
-          ok: false,
-          code: BrokerErrorCode.INTERNAL_ERROR,
-          message: error instanceof Error ? error.message : String(error),
-        },
+        error: this.errorFromThrown(error),
       });
     }
+  }
+
+  private errorFromThrown(error: unknown): BrokerError {
+    if (error instanceof Error && error.message.includes("Session busy")) {
+      return {
+        ok: false,
+        code: BrokerErrorCode.CONFLICT,
+        message: error.message,
+      };
+    }
+    return {
+      ok: false,
+      code: BrokerErrorCode.INTERNAL_ERROR,
+      message: error instanceof Error ? error.message : String(error),
+    };
   }
 }

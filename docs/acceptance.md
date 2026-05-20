@@ -9,6 +9,6 @@ For each run `1..10`:
 - [ ] Response includes `timings`
 - [ ] No manual profile repair between runs
 
-Optional MCP run: `perplexity_send_prompt` from Cursor returns answer.
+Optional MCP run: `perplexity_ask` from Cursor returns answer JSON with `ok: true`.
 
 Concurrent test (once): second `send` while first generating → rejected or queued per `CONCURRENT_REQUEST_POLICY`.

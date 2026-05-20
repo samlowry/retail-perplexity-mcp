@@ -104,17 +104,24 @@ Bind **`127.0.0.1` only** by default.
 
 `response_format`: `text` | `markdown` | `html_fragment` | `json_best_effort`.
 
-## MCP tools (thin wrappers)
+## MCP tools (agent surface)
 
-- `perplexity_ensure_session`
-- `perplexity_new_thread`
-- `perplexity_send_prompt`
-- `perplexity_get_last_answer`
-- `perplexity_cancel`
-- `perplexity_upload_file`
-- `perplexity_health`
+**One tool for agents:** `perplexity_ask`
+
+| Parameter | Default | Notes |
+|-----------|---------|-------|
+| `question` | (required) | Prompt text |
+| `new_chat` | `false` | Maps to `newThread` on `/chat/send` |
+| `timeout_seconds` | `180` | Maps to `timeoutMs` |
+| `format` | `markdown` | `markdown` or `text` only |
+
+Response JSON in text content: success `{ ok, answer, sources?, timings_ms? }`; failure `{ ok: false, code, message }` with codes `NEEDS_LOGIN`, `BROKER_OFFLINE`, `BUSY`, `TIMEOUT`, `FAILED`.
+
+MCP chains `GET /health` then `POST /chat/send` (session id `default` internally). Broker `sendChat` calls `ensureSession` inside the session lock before `sendPromptAndWait`. No `session_id` exposed to agents.
 
 Implement with `@modelcontextprotocol/sdk`; delegate to broker HTTP; no retry/state logic in MCP layer.
+
+**Doctor/dev only (HTTP, not MCP):** `/health`, `/session/ensure`, `/thread/new`, `/chat/cancel`, `/attachment/upload`, `/job/:id`.
 
 ## Error codes (normalize all failures)
 
