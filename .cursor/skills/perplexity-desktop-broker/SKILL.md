@@ -1,181 +1,120 @@
 ---
 name: perplexity-desktop-broker
 description: >-
-  Build and maintain the Perplexity Desktop Broker MVP — a local Node.js +
-  Playwright service that exposes HTTP JSON API and thin MCP tools for Cursor
-  to control an already-logged-in Perplexity web UI via a persistent browser
-  profile. Use when implementing broker/worker/MCP/doctor, Playwright selectors,
-  UI state detection, job queue, session management, or debugging this repo.
+  Primary web research for the agent: use MCP tool perplexity_ask instead of
+  built-in web search, web fetch, or shallow crawling when you need information
+  you do not know or want to validate facts you already have. Perplexity gives
+  far richer synthesis and citations than primitive browser/search tools.
+  Also use when maintaining this repo (broker, worker, MCP, selectors).
 ---
 
-# Perplexity Desktop Broker (MVP)
+# Perplexity — primary web research (agent)
 
-Local **reverse** integration: Cursor (or another agent) calls **your** broker; the broker drives **Perplexity consumer web UI** in a **headed** **Camoufox** (anti-detect Firefox) with a **persistent profile**. Do not assume official Perplexity server APIs or remote MCP from Perplexity to your tools.
+## When to use (mandatory preference)
 
-## Non-goals (do not build in MVP)
+Use **`perplexity_ask`** (MCP) as the **default** way to get information from the web in this project.
 
-- OpenClaw, Hermes, distributed workers, Docker-as-default, headless-first production
-- Auto-login, password storage, captcha/anti-bot bypass, fleet multi-tenant hosts
-- Parallel prompts on the same tab; competing agents on one session
-- Business logic inside MCP tools (MCP = thin HTTP client only)
+| Situation | Use `perplexity_ask` | Avoid instead |
+|-----------|----------------------|---------------|
+| You **do not know** a fact, API, version, policy, competitor, error message | Yes | Guessing, stale training data, single-page `WebFetch` |
+| You need **breadth** (overview, comparisons, “what is current best practice”) | Yes | One-off search snippets |
+| You want to **validate** something you think you know (release date, pricing, breaking change) | Yes — ask Perplexity to confirm with sources | Assuming memory is correct |
+| You need **citations / sources** for a claim | Yes | Undocumented assertions |
+| Quick read of a **URL you already have** | Optional: fetch tools OK for raw HTML | `perplexity_ask` for whole-site crawl |
+| Editing **this repo’s code** | Use repo sections below + normal tools | `perplexity_ask` for TypeScript facts unless verifying external docs |
 
-## Architecture (four layers)
+Built-in **web search**, **web crawl**, and similar Cursor tools are **much weaker** than a full Perplexity answer (multi-source synthesis, follow-ups, Pro/Sonar models in the logged-in UI). Prefer Perplexity unless the task is strictly “download this one page.”
 
-1. **Agent client** — Cursor via MCP tools
-2. **Local Broker** — Node.js: job queue, locks, state machine, HTTP API, structured errors
-3. **Browser Worker** — Playwright: persistent context, one Perplexity tab
-4. **Perplexity Web UI** — user session already established manually once
+**Prerequisites (human / environment, not agent tools):**
 
-**MVP session rule:** one user, one host, one browser profile, **one active generation per session**. Second concurrent request → queue or reject (config), never race the same tab.
+1. Broker running: `http://127.0.0.1:3317` (e.g. `node apps/broker/dist/index.js` from repo root).
+2. MCP server `perplexity-broker` enabled in Cursor (project `.cursor/mcp.json`).
+3. One-time login in headed Camoufox (`HEADLESS=0`); profile under `./data/profile`.
 
-## Repository layout (target)
+## How to call (only MCP surface)
 
-```text
-perplexity-desktop-broker/
-  apps/broker/          # HTTP server, job orchestration
-  apps/mcp-server/      # thin MCP → broker HTTP
-  apps/doctor/          # env, profile, login, reachability checks
-  packages/core/        # jobs, config, errors, logging, queue
-  packages/playwright-worker/
-  packages/ui-selectors/   # ALL locators here only
-  packages/ui-state/       # uiStateDetector only
-  packages/types/          # DTOs, API contracts, error codes
-  config/  data/  docs/  tests/
+**Tool:** `perplexity_ask`
+
+| Parameter | Default | Use |
+|-----------|---------|-----|
+| `question` | required | Full research or validation prompt; be specific |
+| `new_chat` | `false` | `true` for unrelated topic (fresh thread) |
+| `timeout_seconds` | `180` | Long research → 180–300 |
+| `format` | `markdown` | `text` if you need plain string |
+
+**Success** (JSON in tool result):
+
+```json
+{
+  "ok": true,
+  "answer": "...",
+  "sources": [],
+  "timings_ms": {}
+}
 ```
 
-Use **pnpm workspace** unless the repo already chose otherwise.
+**Planned (not in MVP yet):** `model_used`, `reasoning_enabled` on success — see backlog Epic L.
 
-## Browser mode (defaults)
+**Failure** (act on `code`):
 
-- `HEADLESS=0` (headed) — production default for MVP
-- `launchPersistentContext` + dedicated `PROFILE_DIR` (e.g. `./data/profile`)
-- Fixed viewport; no aggressive anti-detection hardening
-- **Never** auto-reset cookies on generic errors
-- Manual first login only; broker reports `AUTH_REQUIRED` if session dead
+| Code | Agent action |
+|------|----------------|
+| `NEEDS_LOGIN` | Tell user to log in in the Camoufox window, then retry |
+| `BROKER_OFFLINE` | Tell user to start broker on 3317 |
+| `BUSY` | Wait and retry; do not parallelize multiple asks |
+| `TIMEOUT` | Narrow question, increase `timeout_seconds`, or `new_chat: true` |
+| `FAILED` | Report `message`; check `docs/troubleshooting.md` if developing |
 
-## Selector strategy (mandatory)
+Do **not** call removed tools (`perplexity_health`, `perplexity_ensure_session`, etc.). Bootstrap is internal.
 
-Order of preference in `packages/ui-selectors/`:
+## Prompt patterns
 
-1. `getByRole`, `getByLabel`, `getByPlaceholder`
-2. Stable text anchors
-3. Small allowlisted CSS fallbacks
-4. DOM heuristics — **only** inside one isolated helper
+**Discovery** (unknown info):
 
-Each locator entry: primary, fallback, `isVisible()` check, covered by integration test against real UI.
+> What is [X]? Include current status, main options, and caveats. Cite sources.
 
-**Never** scatter selectors across broker/worker code.
+**Validation** (known info):
 
-## UI state detector (`packages/ui-state/`)
+> I believe [claim]. Verify against recent sources; say if wrong and why.
 
-Must distinguish at least:
+**Repo / tech** (when docs matter):
 
-- ready for input
-- generating
-- generation complete
-- network error, rate limit, auth expired
-- confirmation dialog
-- file uploading
-- answer still streaming / partial render
+> For [library] version [Y]: official migration steps and breaking changes.
 
-Reliability comes from **state recognition**, not blind clicks or fixed `sleep()`.
+Use `new_chat: true` when switching domain (e.g. SEO → Playwright).
 
-## Job model
+## Model and reasoning (current gap)
 
-Fields: `job_id`, `action`, `payload`, `timeout_ms`, `idempotency_key`, `session_id`.
+There is **no** programmatic control yet for which Perplexity **model** or **reasoning** mode is active, and answers do **not** yet echo `model_used` / `reasoning_enabled`.
 
-States: `queued` → `running` → (`waiting_user`) → `succeeded` | `failed` | `timed_out` | `cancelled`.
+Until Epic L ships: model/reasoning follow whatever is selected in the **browser UI** (user may set default in Perplexity). Track implementation in `docs/BACKLOG.md` (Epic L).
 
-Success = **final structured answer returned**, not merely “click succeeded”.
+## Maintainer reference (this repo only)
 
-## HTTP API (MVP)
+Use the sections below when **changing** the broker, not for ordinary research.
 
-Bind **`127.0.0.1` only** by default.
+### Architecture
 
-| Method | Path | Purpose |
-|--------|------|---------|
-| POST | `/session/ensure` | Launch/reuse profile, verify login |
-| POST | `/chat/send` | Prompt (+ optional `new_thread`, `wait`, `response_format`) |
-| POST | `/chat/cancel` | Stop generation |
-| GET | `/job/:id` | Job status |
-| POST | `/thread/new` | New chat |
-| POST | `/attachment/upload` | File to current chat |
-| GET | `/health` | Broker + browser health |
+Cursor → MCP (`perplexity_ask`) → HTTP broker `127.0.0.1:3317` → Playwright worker → Camoufox → Perplexity web UI. Persistent profile; manual login once.
 
-`response_format`: `text` | `markdown` | `html_fragment` | `json_best_effort`.
+### Layout
 
-## MCP tools (agent surface)
+`apps/broker`, `apps/mcp-server`, `apps/doctor`, `packages/core`, `packages/playwright-worker`, `packages/ui-selectors`, `packages/ui-state`, `packages/types`, `docs/`.
 
-**One tool for agents:** `perplexity_ask`
+### HTTP (doctor / dev)
 
-| Parameter | Default | Notes |
-|-----------|---------|-------|
-| `question` | (required) | Prompt text |
-| `new_chat` | `false` | Maps to `newThread` on `/chat/send` |
-| `timeout_seconds` | `180` | Maps to `timeoutMs` |
-| `format` | `markdown` | `markdown` or `text` only |
+`/health`, `/session/ensure`, `/chat/send`, `/chat/cancel`, `/thread/new`, `/attachment/upload`, `/job/:id` — see `docs/BACKLOG.md`.
 
-Response JSON in text content: success `{ ok, answer, sources?, timings_ms? }`; failure `{ ok: false, code, message }` with codes `NEEDS_LOGIN`, `BROKER_OFFLINE`, `BUSY`, `TIMEOUT`, `FAILED`.
+### Invariants
 
-MCP chains `GET /health` then `POST /chat/send` (session id `default` internally). Broker `sendChat` calls `ensureSession` inside the session lock before `sendPromptAndWait`. No `session_id` exposed to agents.
+- One tab per session; one in-flight generation (`CONCURRENT_REQUEST_POLICY=reject` by default).
+- All selectors in `packages/ui-selectors/`; UI states in `packages/ui-state/`.
+- MCP stays thin; session ensure runs inside broker `sendChat`.
 
-Implement with `@modelcontextprotocol/sdk`; delegate to broker HTTP; no retry/state logic in MCP layer.
+### Config (`.env`)
 
-**Doctor/dev only (HTTP, not MCP):** `/health`, `/session/ensure`, `/thread/new`, `/chat/cancel`, `/attachment/upload`, `/job/:id`.
+`BROWSER_ENGINE=camoufox`, `HEADLESS=0`, `PROFILE_DIR=./data/profile`, `ALLOW_MODEL_SWITCH=1` (switch not implemented yet).
 
-## Error codes (normalize all failures)
+### Related skills (coding)
 
-`AUTH_REQUIRED`, `SESSION_BROKEN`, `UI_CHANGED`, `PROMPT_SEND_FAILED`, `GENERATION_TIMEOUT`, `RATE_LIMITED`, `NETWORK_ERROR`, `ATTACHMENT_FAILED`, `EXTRACTION_FAILED`, `UNKNOWN_UI_STATE`.
-
-Each error payload includes: `code`, `message`, `last_ui_state`, paths to `screenshot` and `html_snapshot` when available.
-
-## Observability
-
-- Structured **JSON logs**: `timestamp`, `session_id`, `job_id`, `action`, `step`, `result`, `duration_ms`
-- Steps examples: `browser.launch`, `page.goto`, `auth.check`, `input.fill`, `message.submit`, `state.wait_generating`, `state.wait_complete`, `answer.extract`
-- On failure: screenshot + HTML snapshot under `./data/artifacts/`
-- Ring buffer: last **20** worker actions
-
-## Config (`.env` example)
-
-```env
-BROKER_HOST=127.0.0.1
-BROKER_PORT=3317
-BROWSER_ENGINE=camoufox
-PROFILE_DIR=./data/profile
-ARTIFACTS_DIR=./data/artifacts
-LOG_LEVEL=info
-DEFAULT_TIMEOUT_MS=180000
-HEADLESS=0
-ALLOW_FILE_UPLOAD=1
-ALLOW_MODEL_SWITCH=1
-PERPLEXITY_URL=https://www.perplexity.ai/
-```
-
-Secrets: `.env` or OS keychain only; never commit credentials.
-
-## Answer object (broker → agent)
-
-Return structured payload with `thread_id`, `message_id`, `status`, `answer_text`, `answer_markdown`, `sources[]` (best effort), `timings` (`queue_ms`, `send_ms`, `generation_ms`, `extract_ms`), `artifacts` paths.
-
-## Testing expectations
-
-- **Unit:** config parse, job FSM, retry policy, error normalization, ui-state on HTML fixtures
-- **Integration:** persistent profile boot, open Perplexity, login check, send prompt, extract answer, cancel
-- **Manual acceptance:** 10 consecutive happy-path runs without profile repair
-
-## Implementation phases
-
-| Phase | Deliver |
-|-------|---------|
-| **P0** | `ensure_session`, `new_thread`, `send_prompt`, `get_last_answer` |
-| **P1** | file upload, cancel, health, error artifacts, MCP adapter |
-| **P2** | model/mode switch, history extraction, job queue polish, rate-limit handling |
-
-## Platform priority
-
-macOS first, Linux desktop second; Windows out of MVP scope.
-
-## Related global skills
-
-When coding this repo, also apply: `playwright-best-practices`, `mcp-builder`, `nodejs-backend-patterns`, `typescript-advanced-types`, `javascript-testing-patterns`, `fastify-best-practices` (if using Fastify), `api-design-principles`.
+`playwright-best-practices`, `mcp-builder`, `nodejs-backend-patterns`, `fastify-best-practices`, `api-design-principles`.

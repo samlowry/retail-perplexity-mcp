@@ -31,7 +31,26 @@ Local Node.js + Playwright broker: Cursor → MCP (thin) → HTTP broker → Pla
 | **M0 — Repo boots** | `pnpm install`, `pnpm build`, empty broker listens on `127.0.0.1:3317`, `GET /health` → `{ ok: true, browser: "down" }` |
 | **M1 — P0 usable** | Manual login once; `doctor` green; Cursor can `send_prompt` + get structured answer via HTTP (MCP optional) |
 | **M2 — P1 complete** | MCP tools wired; cancel, upload, artifacts on failure; 10× manual acceptance pass |
-| **M3 — P2 polish** | Model switch, history, queue/rate-limit handling documented and tested |
+| **M3 — P2 polish** | Model/reasoning control (Epic L), history, queue/rate-limit handling documented and tested |
+
+---
+
+## Epic L — Perplexity model & reasoning (P1 → P2)
+
+**Gap today:** no API to set or read active Perplexity **model** / **reasoning**; answers do not return which model was used. UI picker is best-effort in `packages/ui-selectors/src/model.ts` only.
+
+| ID | Pri | Task | Package / path | Skills | Deps |
+|----|-----|------|----------------|--------|------|
+| L-01 | P1 | Map Perplexity UI: model picker, reasoning toggle (on/off), labels in DOM | `packages/ui-selectors/src/model.ts`, fixture HTML | `playwright-best-practices` | D-01 |
+| L-02 | P1 | `getModelSettings()` — return `{ model: string, reasoning: boolean }` from current page | `packages/playwright-worker/src/model.ts` | project skill | L-01, F-03 |
+| L-03 | P1 | `setModelSettings({ model, reasoning })` — apply before send when `ALLOW_MODEL_SWITCH=1` | `packages/playwright-worker/src/model.ts` | project skill | L-01, F-06 |
+| L-04 | P1 | Config/env defaults: `PERPLEXITY_MODEL`, `PERPLEXITY_REASONING` (install-time preference) | `packages/core/src/config.ts`, `.env.example` | project skill | L-03, C-01 |
+| L-05 | P1 | Doctor check: report configured vs detected model + reasoning | `apps/doctor/src/checks/model.ts` | project skill | L-02, H-03 |
+| L-06 | P1 | Extend answer payload: `model_used`, `reasoning_enabled` on every successful chat | `packages/types`, `extract` / `broker-service`, MCP `perplexity_ask` | `api-design-principles` | L-02, F-10 |
+| L-07 | P2 | HTTP: `GET /model/settings`, `POST /model/settings` (optional MCP params on `perplexity_ask`) | `apps/broker`, `apps/mcp-server` | `mcp-builder` | L-02, L-03, L-06 |
+| L-08 | P2 | Integration test `@live`: set model → send → assert `model_used` in response | `tests/integration/model.test.ts` | `playwright-best-practices` | L-06, T-07 |
+
+**Acceptance:** agent can rely on `model_used` + `reasoning_enabled` in `perplexity_ask` success JSON; operator can set defaults via env and verify via doctor.
 
 ---
 
@@ -133,7 +152,7 @@ All locators **only** under `packages/ui-selectors/`. No selectors in worker/bro
 | F-13 | P1 | Ring buffer last 20 actions | `packages/playwright-worker/src/action-log.ts` | project skill | F-01 |
 | F-14 | P1 | On failure: screenshot + HTML snapshot → `data/artifacts/` | `packages/playwright-worker/src/artifacts.ts` | `playwright-best-practices` (debugging) | C-01 |
 | F-15 | P2 | `listThreadMessages(limit)`, `getThreadMetadata()` | `packages/playwright-worker/src/history.ts` | project skill | F-10 |
-| F-16 | P2 | Model/mode switch when `ALLOW_MODEL_SWITCH=1` | `packages/playwright-worker/src/model.ts` | D-08 | F-03 |
+| F-16 | P2 | Superseded by Epic L (`setModelSettings` / `getModelSettings`) | `packages/playwright-worker/src/model.ts` | D-08, Epic L | F-03 |
 
 ---
 
@@ -145,15 +164,10 @@ Thin HTTP client only — **no** job FSM or Playwright in MCP layer (`mcp-builde
 |----|-----|------|----------------|--------|------|
 | G-01 | P1 | MCP project setup: `@modelcontextprotocol/sdk`, stdio transport | `apps/mcp-server/src/index.ts` | `mcp-builder` | A-03 |
 | G-02 | P1 | Shared broker HTTP client (`BROKER_HOST:PORT`) | `apps/mcp-server/src/broker-client.ts` | `mcp-builder` | C-07 |
-| G-03 | P1 | Tool: `perplexity_ensure_session` | `apps/mcp-server/src/tools/session.ts` | `mcp-builder` | G-02, C-08 |
-| G-04 | P1 | Tool: `perplexity_new_thread` | `apps/mcp-server/src/tools/thread.ts` | `mcp-builder` | G-02 |
-| G-05 | P1 | Tool: `perplexity_send_prompt` | `apps/mcp-server/src/tools/chat.ts` | `mcp-builder` | G-02, C-10 |
-| G-06 | P1 | Tool: `perplexity_get_last_answer` | `apps/mcp-server/src/tools/chat.ts` | `mcp-builder` | G-02 |
-| G-07 | P1 | Tool: `perplexity_cancel` | `apps/mcp-server/src/tools/chat.ts` | `mcp-builder` | C-12 |
-| G-08 | P1 | Tool: `perplexity_upload_file` | `apps/mcp-server/src/tools/attachment.ts` | `mcp-builder` | C-13 |
-| G-09 | P1 | Tool: `perplexity_health` | `apps/mcp-server/src/tools/health.ts` | `mcp-builder` | C-14 |
-| G-10 | P1 | Zod input schemas + actionable error text for agents | `apps/mcp-server/src/tools/*.ts` | `mcp-builder`, `typescript-advanced-types` | G-03–G-09 |
-| G-11 | P1 | Example `.cursor/mcp.json` snippet for local stdio server | `docs/mcp-cursor-setup.md` | `mcp-builder` | G-01 |
+| G-03 | P1 | **Done:** single tool `perplexity_ask` (health/ensure/send internal) | `apps/mcp-server/src/index.ts` | `mcp-builder` | G-02, C-10 |
+| G-04 | P1 | Agent error codes: `NEEDS_LOGIN`, `BROKER_OFFLINE`, `BUSY`, `TIMEOUT`, `FAILED` | `apps/mcp-server/src/agent-codes.ts` | `mcp-builder` | G-03 |
+| G-05 | P1 | Example `.cursor/mcp.json` snippet for local stdio server | `docs/mcp-cursor-setup.md` | `mcp-builder` | G-01 |
+| G-06 | P2 | Optional `model` / `reasoning` on `perplexity_ask` | `apps/mcp-server` | Epic L | G-03, L-07 |
 
 ---
 
