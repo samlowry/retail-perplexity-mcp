@@ -1,8 +1,8 @@
 {
   "mcpServers": {
     "perplexity-broker": {
-      "command": "pnpm",
-      "args": ["--filter", "@pdb/mcp-server", "dev"],
+      "command": "node",
+      "args": ["/Users/samlowry/Documents/retail-perplexity-mcp/apps/mcp-server/dist/index.js"],
       "env": {
         "BROKER_HOST": "127.0.0.1",
         "BROKER_PORT": "3317"

@@ -1,5 +1,18 @@
 # Cursor MCP setup
 
+## Global (all projects)
+
+Installed for this machine:
+
+- **MCP:** `~/.cursor/mcp.json` — server `perplexity-broker` with **absolute** path to `apps/mcp-server/dist/index.js` (Cursor may ignore `cwd`)
+- **Skill:** `~/.cursor/skills/perplexity-desktop-broker/SKILL.md`
+
+Broker must still run from this repo (`node apps/broker/dist/index.js`). Profile and Camoufox state live in `./data/profile` here.
+
+After changes: **Reload Window** in Cursor so MCP/skills refresh.
+
+## Project-only (optional duplicate)
+
 1. Start the broker: `pnpm dev:broker`
 2. Add to `.cursor/mcp.json` in your project or user config:
 
