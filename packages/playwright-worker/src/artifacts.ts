@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
-import type { Page } from "playwright";
+import type { Page } from "playwright-core";
 
 export interface CaptureResult {
   screenshot?: string;

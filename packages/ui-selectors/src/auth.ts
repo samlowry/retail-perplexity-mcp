@@ -1,4 +1,5 @@
 import type { Page } from "playwright";
+import { isPromptInputVisible } from "./input.js";
 
 export interface AuthCheckResult {
   loggedIn: boolean;
@@ -23,22 +24,8 @@ export async function checkAuthState(page: Page): Promise<AuthCheckResult> {
     return { loggedIn: false, reason: "sign_in_button" };
   }
 
-  const promptVisible = await page
-    .getByPlaceholder(/ask anything|search|follow-up/i)
-    .first()
-    .isVisible()
-    .catch(() => false);
-  if (promptVisible) {
+  if (await isPromptInputVisible(page)) {
     return { loggedIn: true, reason: "prompt_visible" };
-  }
-
-  const textboxVisible = await page
-    .getByRole("textbox")
-    .first()
-    .isVisible()
-    .catch(() => false);
-  if (textboxVisible) {
-    return { loggedIn: true, reason: "textbox_visible" };
   }
 
   return { loggedIn: false, reason: "unknown" };

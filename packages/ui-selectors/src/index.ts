@@ -1,4 +1,8 @@
-export * from "./locator.js";
+export {
+  isAnyStrategyVisible,
+  resolveVisibleLocator,
+  type LocatorStrategy,
+} from "./locator.js";
 export * from "./input.js";
 export * from "./buttons.js";
 export * from "./thread.js";

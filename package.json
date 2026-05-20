@@ -16,6 +16,7 @@
     "test:watch": "vitest",
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "smoke:worker": "pnpm --filter @pdb/playwright-worker smoke",
+    "camoufox:fetch": "pnpm --filter @pdb/playwright-worker exec camoufox-js fetch",
     "typecheck": "pnpm -r run typecheck"
   },
   "devDependencies": {

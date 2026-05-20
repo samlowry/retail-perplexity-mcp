@@ -1,4 +1,4 @@
-import type { Page } from "playwright";
+import type { Page } from "playwright-core";
 import { getPromptInput, getStopButton, getSubmitButton } from "@pdb/ui-selectors";
 import { UiState, waitForUiState } from "@pdb/ui-state";
 import { BrokerErrorCode } from "@pdb/types";

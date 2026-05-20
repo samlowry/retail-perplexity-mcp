@@ -1,9 +1,10 @@
 import { mkdir } from "node:fs/promises";
-import { chromium, type BrowserContext, type Page } from "playwright";
+import type { BrowserContext, Page } from "playwright-core";
 import { checkAuthState } from "@pdb/ui-selectors";
 import { BrokerErrorCode, type BrokerError } from "@pdb/types";
 import type { WorkerConfig } from "./types.js";
 import { ActionLog } from "./action-log.js";
+import { launchBrowserContext } from "./browser-launch.js";
 
 export class BrowserSessionManager {
   private context: BrowserContext | null = null;
@@ -17,14 +18,11 @@ export class BrowserSessionManager {
   }
 
   async ensureSession(): Promise<{ loggedIn: boolean; error?: BrokerError }> {
-    this.actionLog.record("browser.launch");
+    this.actionLog.record("browser.launch", this.config.browserEngine);
     await mkdir(this.config.profileDir, { recursive: true });
 
     if (!this.context) {
-      this.context = await chromium.launchPersistentContext(this.config.profileDir, {
-        headless: this.config.headless,
-        viewport: { width: 1280, height: 900 },
-      });
+      this.context = await launchBrowserContext(this.config);
     }
 
     if (!this.page || this.page.isClosed()) {

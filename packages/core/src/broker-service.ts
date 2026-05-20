@@ -30,6 +30,7 @@ export class BrokerService {
       profileDir: config.profileDir,
       artifactsDir: config.artifactsDir,
       perplexityUrl: config.perplexityUrl,
+      browserEngine: config.browserEngine,
       headless: config.headless,
       defaultTimeoutMs: config.defaultTimeoutMs,
       allowFileUpload: config.allowFileUpload,

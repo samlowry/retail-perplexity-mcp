@@ -1,6 +1,6 @@
 import { config as loadEnv } from "dotenv";
 import { resolve } from "node:path";
-import { checkNodeVersion } from "./checks/env.js";
+import { checkCamoufoxInstall, checkNodeVersion } from "./checks/env.js";
 import { checkPaths } from "./checks/paths.js";
 import { checkSession } from "./checks/session.js";
 import { checkBroker } from "./checks/broker.js";
@@ -12,7 +12,7 @@ const withBroker = process.argv.includes("--broker");
 const skipSession = process.argv.includes("--skip-session");
 
 async function main(): Promise<void> {
-  const results = [checkNodeVersion(), ...(await checkPaths(cwd))];
+  const results = [checkNodeVersion(), await checkCamoufoxInstall(), ...(await checkPaths(cwd))];
 
   if (!skipSession) {
     results.push(await checkSession(cwd));

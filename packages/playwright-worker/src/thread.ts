@@ -1,4 +1,4 @@
-import type { Page } from "playwright";
+import type { Page } from "playwright-core";
 import { getNewThreadButton } from "@pdb/ui-selectors";
 
 export async function newThread(page: Page): Promise<void> {

@@ -28,3 +28,19 @@ export async function resolveVisibleLocator(
 
   return null;
 }
+
+/**
+ * Returns true if any strategy resolves to a visible element (single pass, no polling).
+ */
+export async function isAnyStrategyVisible(
+  page: Page,
+  strategies: LocatorStrategy[],
+): Promise<boolean> {
+  for (const strategy of strategies) {
+    const locator = strategy.resolve(page);
+    if (await locator.first().isVisible().catch(() => false)) {
+      return true;
+    }
+  }
+  return false;
+}

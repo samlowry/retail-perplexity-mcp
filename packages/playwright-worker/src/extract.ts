@@ -1,4 +1,4 @@
-import type { Page } from "playwright";
+import type { Page } from "playwright-core";
 import type { AnswerPayload, ResponseFormatType, Source } from "@pdb/types";
 import { getLastAnswerBlock } from "@pdb/ui-selectors";
 import { BrokerErrorCode } from "@pdb/types";

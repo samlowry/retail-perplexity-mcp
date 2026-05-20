@@ -48,6 +48,13 @@ describe("detectUiState on HTML fixtures", () => {
     expect(result.state).toBe(UiState.COMPLETE);
   });
 
+  it("detects complete on lexical follow-up input (Perplexity 2025+)", async () => {
+    const page = await loadFixture("complete-lexical.html");
+    const result = await detectUiState(page);
+    await page.close();
+    expect(result.state).toBe(UiState.COMPLETE);
+  });
+
   it("detects rate limited", async () => {
     const page = await loadFixture("rate-limit.html");
     const result = await detectUiState(page);

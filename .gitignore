@@ -2,11 +2,29 @@ node_modules/
 dist/
 coverage/
 .env
+
+# Runtime / browser data (relative to any app or package cwd)
+**/data/profile/
+**/data/artifacts/
+**/data/logs/
+**/data/state/
+
+# Same paths when created at repository root
 data/profile/
 data/logs/
 data/artifacts/
 data/state/
+
 *.log
 .DS_Store
+._*
+Thumbs.db
+
+# Playwright / test output
 playwright-report/
 test-results/
+blob-report/
+
+# Tooling caches
+.turbo/
+.cache/

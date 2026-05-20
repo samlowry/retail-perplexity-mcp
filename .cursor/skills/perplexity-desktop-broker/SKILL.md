@@ -10,7 +10,7 @@ description: >-
 
 # Perplexity Desktop Broker (MVP)
 
-Local **reverse** integration: Cursor (or another agent) calls **your** broker; the broker drives **Perplexity consumer web UI** in a **headed** Chromium with a **persistent profile**. Do not assume official Perplexity server APIs or remote MCP from Perplexity to your tools.
+Local **reverse** integration: Cursor (or another agent) calls **your** broker; the broker drives **Perplexity consumer web UI** in a **headed** **Camoufox** (anti-detect Firefox) with a **persistent profile**. Do not assume official Perplexity server APIs or remote MCP from Perplexity to your tools.
 
 ## Non-goals (do not build in MVP)
 
@@ -134,7 +134,7 @@ Each error payload includes: `code`, `message`, `last_ui_state`, paths to `scree
 ```env
 BROKER_HOST=127.0.0.1
 BROKER_PORT=3317
-PLAYWRIGHT_BROWSER=chromium
+BROWSER_ENGINE=camoufox
 PROFILE_DIR=./data/profile
 ARTIFACTS_DIR=./data/artifacts
 LOG_LEVEL=info

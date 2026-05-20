@@ -20,7 +20,9 @@
     "@pdb/types": "workspace:*",
     "@pdb/ui-selectors": "workspace:*",
     "@pdb/ui-state": "workspace:*",
-    "playwright": "1.60.0"
+    "camoufox-js": "0.10.2",
+    "impit-darwin-arm64": "0.13.1",
+    "playwright-core": "1.60.0"
   },
   "devDependencies": {
     "@types/node": "^22.15.29",

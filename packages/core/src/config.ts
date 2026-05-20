@@ -8,7 +8,8 @@ export type ConcurrentRequestPolicy = "reject" | "fifo";
 export interface AppConfig {
   brokerHost: string;
   brokerPort: number;
-  playwrightBrowser: "chromium" | "firefox" | "webkit";
+  /** camoufox (default) or chromium legacy */
+  browserEngine: "camoufox" | "chromium";
   profileDir: string;
   artifactsDir: string;
   logLevel: string;
@@ -33,7 +34,10 @@ export function loadConfig(cwd = process.cwd()): AppConfig {
   return {
     brokerHost: process.env.BROKER_HOST ?? "127.0.0.1",
     brokerPort: Number(process.env.BROKER_PORT ?? "3317"),
-    playwrightBrowser: (process.env.PLAYWRIGHT_BROWSER ?? "chromium") as AppConfig["playwrightBrowser"],
+    browserEngine: (() => {
+      const raw = process.env.BROWSER_ENGINE ?? process.env.PLAYWRIGHT_BROWSER ?? "camoufox";
+      return raw === "chromium" ? "chromium" : "camoufox";
+    })(),
     profileDir: resolve(cwd, profileDir),
     artifactsDir: resolve(cwd, artifactsDir),
     logLevel: process.env.LOG_LEVEL ?? "info",

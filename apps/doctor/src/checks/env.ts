@@ -1,3 +1,5 @@
+import { checkCamoufoxBinaries } from "@pdb/playwright-worker";
+
 export interface CheckResult {
   name: string;
   ok: boolean;
@@ -11,5 +13,15 @@ export function checkNodeVersion(): CheckResult {
     name: "node_version",
     ok,
     message: ok ? `Node ${process.versions.node}` : `Node ${process.versions.node} (need >=20)`,
+  };
+}
+
+/** Verify Camoufox browser binaries are downloaded. */
+export async function checkCamoufoxInstall(): Promise<CheckResult> {
+  const result = await checkCamoufoxBinaries();
+  return {
+    name: "camoufox_binaries",
+    ok: result.ok,
+    message: result.message,
   };
 }

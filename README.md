@@ -6,7 +6,7 @@ Local Node.js + Playwright broker that exposes an HTTP JSON API and thin MCP too
 
 - Node.js 20+
 - pnpm 10+ (`npx pnpm@10.11.0 install` if needed)
-- Playwright browsers: `npx playwright install chromium`
+- Camoufox browser: `pnpm camoufox:fetch` (anti-detect Firefox for Cloudflare login)
 
 ## Quick start
 
@@ -27,12 +27,14 @@ curl http://127.0.0.1:3317/health
 
 1. Set `HEADLESS=0` in `.env`
 2. Run `pnpm doctor` (after PR-5) or `pnpm smoke:worker` (after PR-3)
-3. Log in manually in the opened Chromium window
+3. Log in manually in the opened Camoufox (Firefox) window
 4. Session is stored under `./data/profile`
+
+> After migrating from Chromium, delete `./data/profile` and log in again (profiles are not compatible).
 
 ## Linux desktop
 
-Same flow as macOS. Use headed Chromium (`HEADLESS=0`) and install deps: `npx playwright install chromium`. X11/Wayland display required for manual login.
+Same flow as macOS. Use headed Camoufox (`HEADLESS=0`), run `pnpm camoufox:fetch`. X11/Wayland display required for manual login.
 
 ## Workspace layout
 

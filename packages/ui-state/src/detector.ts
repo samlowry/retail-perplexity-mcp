@@ -1,5 +1,10 @@
 import type { Page } from "playwright";
-import { checkAuthState } from "@pdb/ui-selectors";
+import {
+  answerStrategies,
+  checkAuthState,
+  isAnyStrategyVisible,
+  promptInputStrategies,
+} from "@pdb/ui-selectors";
 import { UiState, type UiDetectionResult, type UiStateType } from "./types.js";
 
 let lastKnownState: UiStateType = UiState.UNKNOWN;
@@ -60,17 +65,8 @@ export async function detectUiState(page: Page): Promise<UiDetectionResult> {
     return { state: UiState.GENERATING };
   }
 
-  const answerVisible = await page
-    .locator('[data-role="assistant"], .prose, article')
-    .last()
-    .isVisible()
-    .catch(() => false);
-
-  const promptVisible = await page
-    .getByPlaceholder(/ask anything|search|follow-up/i)
-    .first()
-    .isVisible()
-    .catch(() => false);
+  const answerVisible = await isAnyStrategyVisible(page, answerStrategies);
+  const promptVisible = await isAnyStrategyVisible(page, promptInputStrategies);
 
   if (answerVisible && promptVisible) {
     const streaming = await page
