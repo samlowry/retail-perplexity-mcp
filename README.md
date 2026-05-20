@@ -17,6 +17,8 @@ npx pnpm@10.11.0 build
 npx pnpm@10.11.0 dev:broker
 ```
 
+Run broker commands from the repo root, or use absolute `PROFILE_DIR` / `ARTIFACTS_DIR` in `.env`.
+
 Health check:
 
 ```bash

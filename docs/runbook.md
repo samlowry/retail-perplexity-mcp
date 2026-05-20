@@ -9,6 +9,8 @@
 
 ## Restart broker
 
+Start the broker from the **repository root**, or set **absolute** `PROFILE_DIR` / `ARTIFACTS_DIR` in `.env` (so profile cookies are found regardless of cwd).
+
 ```bash
 pnpm dev:broker
 ```
