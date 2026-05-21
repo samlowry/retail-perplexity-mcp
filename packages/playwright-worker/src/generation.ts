@@ -89,11 +89,22 @@ export function uiStateToPollResult(state: UiStateType, detail?: string): Genera
   };
 }
 
-/** Navigate to thread URL when poll targets a different topic than the active tab. */
+function normalizeThreadUrl(url: string): string {
+  return url.split("#")[0].replace(/\/$/, "");
+}
+
+/**
+ * Open the chat-of-interest before every UI status read.
+ * Always navigates or reloads — even when that URL is already active — so a frozen Perplexity SPA refreshes.
+ */
 export async function openThreadUrl(page: Page, threadUrl: string): Promise<void> {
-  const current = page.url();
-  if (current === threadUrl) return;
-  await page.goto(threadUrl, { waitUntil: "domcontentloaded" });
+  const current = normalizeThreadUrl(page.url());
+  const target = normalizeThreadUrl(threadUrl);
+  if (current === target) {
+    await page.reload({ waitUntil: "domcontentloaded" });
+  } else {
+    await page.goto(threadUrl, { waitUntil: "domcontentloaded" });
+  }
   await page.waitForLoadState("load").catch(() => undefined);
 }
 
