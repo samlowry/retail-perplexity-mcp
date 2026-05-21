@@ -89,8 +89,8 @@ export class BrokerService {
   ): Promise<ThreadStatusResponse | BrokerError> {
     try {
       const result = await this.lock.runExclusive(sessionId, async () => {
-        const session = await this.worker.ensureSession();
-        if (session.error) return session.error;
+        const ready = await this.worker.ensureBrowserReady();
+        if (isBrokerError(ready)) return ready;
         return this.worker.getThreadStatus(threadUrl, responseFormat ?? "markdown");
       });
 

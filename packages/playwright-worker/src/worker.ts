@@ -34,6 +34,12 @@ export class PlaywrightWorker {
     return this.session.ensureSession();
   }
 
+  async ensureBrowserReady(): Promise<{ ok: true } | BrokerError> {
+    const result = await this.session.ensureBrowserReady();
+    if (!result.ok) return result.error;
+    return { ok: true };
+  }
+
   async openHome(): Promise<void> {
     const page = this.session.getPage();
     if (!page) throw new Error("Session not initialized");

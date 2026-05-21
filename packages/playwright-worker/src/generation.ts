@@ -32,13 +32,17 @@ export function uiStateToPollResult(state: UiStateType, detail?: string): Genera
     return { phase: "finished", uiState: state };
   }
   if (state === UiState.AUTH_EXPIRED) {
+    const hint =
+      detail === "sign_in_button" || detail === "auth_url"
+        ? "Log in via the broker profile browser (pnpm doctor), then retry."
+        : "Session may have expired — log in manually in PROFILE_DIR browser.";
     return {
       phase: "finished",
       uiState: state,
       error: {
         ok: false,
         code: BrokerErrorCode.AUTH_REQUIRED,
-        message: detail ?? "Login required",
+        message: detail ? `${detail}: ${hint}` : hint,
         lastUiState: state,
       },
     };
@@ -90,6 +94,7 @@ export async function openThreadUrl(page: Page, threadUrl: string): Promise<void
   const current = page.url();
   if (current === threadUrl) return;
   await page.goto(threadUrl, { waitUntil: "domcontentloaded" });
+  await page.waitForLoadState("load").catch(() => undefined);
 }
 
 /** Length of visible answer text on page (0 if no answer block yet). */

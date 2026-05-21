@@ -52,6 +52,24 @@ export class BrowserSessionManager {
     return { loggedIn: true };
   }
 
+  /**
+   * Ensure Playwright context exists without leaving the current page (for thread status polls).
+   */
+  async ensureBrowserReady(): Promise<{ ok: true } | { ok: false; error: BrokerError }> {
+    this.actionLog.record("browser.launch", this.config.browserEngine);
+    await mkdir(this.config.profileDir, { recursive: true });
+
+    if (!this.context) {
+      this.context = await launchBrowserContext(this.config);
+    }
+
+    if (!this.page || this.page.isClosed()) {
+      this.page = this.context.pages()[0] ?? (await this.context.newPage());
+    }
+
+    return { ok: true };
+  }
+
   async close(): Promise<void> {
     await this.context?.close();
     this.context = null;

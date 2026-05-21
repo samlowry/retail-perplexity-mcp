@@ -55,6 +55,13 @@ describe("detectUiState on HTML fixtures", () => {
     expect(result.state).toBe(UiState.COMPLETE);
   });
 
+  it("detects complete on thread page with answer only (no home prompt)", async () => {
+    const page = await loadFixture("complete-thread-answer-only.html");
+    const result = await detectUiState(page);
+    await page.close();
+    expect(result.state).toBe(UiState.COMPLETE);
+  });
+
   it("detects rate limited", async () => {
     const page = await loadFixture("rate-limit.html");
     const result = await detectUiState(page);

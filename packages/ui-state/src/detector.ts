@@ -4,6 +4,7 @@ import {
   checkAuthState,
   isAnyStrategyVisible,
   promptInputStrategies,
+  resolveVisibleLocator,
 } from "@pdb/ui-selectors";
 import { UiState, type UiDetectionResult, type UiStateType } from "./types.js";
 
@@ -27,12 +28,6 @@ export async function detectUiState(page: Page): Promise<UiDetectionResult> {
   if (/network error|failed to load|something went wrong/i.test(bodyText)) {
     lastKnownState = UiState.NETWORK_ERROR;
     return { state: UiState.NETWORK_ERROR };
-  }
-
-  const auth = await checkAuthState(page);
-  if (!auth.loggedIn) {
-    lastKnownState = UiState.AUTH_EXPIRED;
-    return { state: UiState.AUTH_EXPIRED, detail: auth.reason };
   }
 
   const dialogVisible = await page
@@ -65,7 +60,14 @@ export async function detectUiState(page: Page): Promise<UiDetectionResult> {
     return { state: UiState.GENERATING };
   }
 
-  const answerVisible = await isAnyStrategyVisible(page, answerStrategies);
+  const auth = await checkAuthState(page);
+  if (!auth.loggedIn) {
+    lastKnownState = UiState.AUTH_EXPIRED;
+    return { state: UiState.AUTH_EXPIRED, detail: auth.reason };
+  }
+
+  const answerBlock = await resolveVisibleLocator(page, answerStrategies, 8_000);
+  const answerVisible = answerBlock !== null;
   const promptVisible = await isAnyStrategyVisible(page, promptInputStrategies);
 
   if (answerVisible && promptVisible) {
@@ -78,6 +80,11 @@ export async function detectUiState(page: Page): Promise<UiDetectionResult> {
       lastKnownState = UiState.STREAMING_PARTIAL;
       return { state: UiState.STREAMING_PARTIAL };
     }
+    lastKnownState = UiState.COMPLETE;
+    return { state: UiState.COMPLETE };
+  }
+
+  if (answerVisible) {
     lastKnownState = UiState.COMPLETE;
     return { state: UiState.COMPLETE };
   }
