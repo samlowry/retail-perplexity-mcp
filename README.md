@@ -56,7 +56,7 @@ Full paths, architecture, logs, and uninstall: **[docs/launchd-macos.md](docs/la
 
 See [docs/mcp-cursor-setup.md](docs/mcp-cursor-setup.md). Example config: [.cursor/mcp.json](.cursor/mcp.json).
 
-Agents use MCP **`perplexity_submit`** (`question` + optional `chat_id`) then **`perplexity_status`** with the same `chat_id` until `completed` or `error`. See [docs/mcp-cursor-setup.md](docs/mcp-cursor-setup.md).
+Agents use MCP **`perplexity_submit_question`** (`question` + optional `chat_id`) then **`perplexity_get_answer`** with the same `chat_id` until `completed` or `error`. See [docs/mcp-cursor-setup.md](docs/mcp-cursor-setup.md).
 
 ## Scripts
 

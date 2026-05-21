@@ -32,12 +32,12 @@ After changes: **Reload Window** in Cursor so MCP/skills refresh.
 }
 ```
 
-3. Restart Cursor and verify MCP tools: `perplexity_submit`, `perplexity_status`.
+3. Restart Cursor and verify MCP tools: `perplexity_submit_question`, `perplexity_get_answer`.
 
 ## Two-command flow
 
-1. **`perplexity_submit`** — `question` + optional **`chat_id`**. Returns **`chat_id`** (Perplexity thread URL) when the prompt is on the page.
-2. **`perplexity_status`** — same **`chat_id`** until `completed` or `error`.
+1. **`perplexity_submit_question`** — `question` + optional **`chat_id`**. Returns **`chat_id`** (Perplexity thread URL) when the prompt is on the page.
+2. **`perplexity_get_answer`** — same **`chat_id`** until `completed` or `error`.
 
 ### Chat targeting
 
@@ -52,12 +52,12 @@ Poll every few seconds. No broker job store or timeout — you decide when to st
 
 | Tool | Purpose |
 |------|---------|
-| `perplexity_submit` | Send question; returns `chat_id` |
-| `perplexity_status` | Status + `result` / errors by `chat_id` |
+| `perplexity_submit_question` | Send question; returns `chat_id` |
+| `perplexity_get_answer` | Status + `result` / errors by `chat_id` |
 
 Session bootstrap runs inside the broker; `session_id` is always `default` and is not exposed on MCP.
 
-### `perplexity_submit` parameters
+### `perplexity_submit_question` parameters
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
@@ -65,11 +65,11 @@ Session bootstrap runs inside the broker; `session_id` is always `default` and i
 | `chat_id` | string | — | Thread URL or slug; **omit for new topic** |
 | `format` | `markdown` \| `text` | `markdown` | Answer format when completed |
 
-### `perplexity_status` parameters
+### `perplexity_get_answer` parameters
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `chat_id` | string | (required) | From `perplexity_submit` (URL or slug) |
+| `chat_id` | string | (required) | From `perplexity_submit_question` (URL or slug) |
 | `format` | `markdown` \| `text` | `markdown` | Answer format when completed |
 
 ### Response JSON (text content)

@@ -7,7 +7,7 @@ export const CHAT_OUTPUT_INSTRUCTION_SEPARATOR = "\n\n----\n\n";
 export const CHAT_OUTPUT_INSTRUCTION =
   "Output your entire response directly in this chat. Do not create files, attachments, canvas artifacts, or downloadable documents — put all content in the message body.";
 
-/** Result of preparing text sent to the broker on perplexity_submit. */
+/** Result of preparing text sent to the broker on perplexity_submit_question. */
 export interface PreparedSubmitPrompt {
   text: string;
   /** False when the question already contained the suffix block. */

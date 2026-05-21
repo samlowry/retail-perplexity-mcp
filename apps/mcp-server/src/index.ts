@@ -70,7 +70,7 @@ function failureFromError(error: unknown, chatId?: string): AgentToolFailure {
       message = error.body;
     }
     if (!message && error.status === 400) {
-      message = "Invalid request (chat_id is required for perplexity_status)";
+      message = "Invalid request (chat_id is required for perplexity_get_answer)";
     }
     if (!message) {
       message =
@@ -159,7 +159,7 @@ server.tool(
             mcp_version: MCP_VERSION,
             prompt_suffix_on_submit: true,
             suffix_separator: CHAT_OUTPUT_INSTRUCTION_SEPARATOR,
-            tools: ["perplexity_submit", "perplexity_status", "perplexity_broker_info"],
+            tools: ["perplexity_submit_question", "perplexity_get_answer", "perplexity_broker_info"],
           }),
         },
       ],
@@ -168,8 +168,8 @@ server.tool(
 );
 
 server.tool(
-  "perplexity_submit",
-  "Send a question to Perplexity. Optional chat_id (thread URL or search slug from a prior submit) continues that chat; omit chat_id for a new topic. Returns chat_id when the prompt is submitted; poll with perplexity_status.",
+  "perplexity_submit_question",
+  "Send a question to Perplexity. Optional chat_id (thread URL or search slug from a prior submit) continues that chat; omit chat_id for a new topic. Returns chat_id when the prompt is submitted; poll with perplexity_get_answer.",
   {
     question: questionSchema,
     chat_id: chatIdSchema,
@@ -209,8 +209,8 @@ server.tool(
 );
 
 server.tool(
-  "perplexity_status",
-  "Check a submitted task by chat_id (from perplexity_submit). Opens the Perplexity thread if needed. status: running | completed | error; result when completed; visible_chars while running.",
+  "perplexity_get_answer",
+  "Check a submitted task by chat_id (from perplexity_submit_question). Opens the Perplexity thread if needed. status: running | completed | error; result when completed; visible_chars while running.",
   {
     chat_id: chatIdRequiredSchema,
     format: formatSchema,

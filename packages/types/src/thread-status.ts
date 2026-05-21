@@ -1,7 +1,7 @@
 import type { BrokerError } from "./errors.js";
 import type { ChatAnswerResult, ResponseFormatType } from "./chat.js";
 
-/** Agent-facing task status (MCP perplexity_status). */
+/** Agent-facing task status (MCP perplexity_get_answer). */
 export const ThreadTaskStatus = {
   RUNNING: "running",
   COMPLETED: "completed",

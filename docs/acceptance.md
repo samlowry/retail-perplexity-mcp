@@ -11,6 +11,6 @@ For each run `1..10`:
 - [ ] Response includes `timings`
 - [ ] No manual profile repair between runs
 
-Optional MCP run: `perplexity_submit` then `perplexity_status` until `status: completed` with `result`.
+Optional MCP run: `perplexity_submit_question` then `perplexity_get_answer` until `status: completed` with `result`.
 
 Concurrent test (once): second `send` while first generating → rejected or queued per `CONCURRENT_REQUEST_POLICY`.

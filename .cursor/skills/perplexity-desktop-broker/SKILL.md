@@ -3,7 +3,7 @@ name: perplexity-desktop-broker
 description: >-
   Mandatory research-before-reasoning workflow. Activate whenever you need to
   think, plan, decide, design, compare options, investigate, or implement
-  something non-trivial — before drawing conclusions, use MCP perplexity_submit + perplexity_status
+  something non-trivial — before drawing conclusions, use MCP perplexity_submit_question + perplexity_get_answer
   (not built-in web search/crawl). If project context is unclear, explore the
   codebase first, then Perplexity with full brief, then reason. If the user
   request is self-contained, Perplexity first with all incoming info, then
@@ -20,7 +20,7 @@ The user may refer to this research path without saying “Perplexity”:
 
 | Synonym | Treat as |
 |---------|----------|
-| Перп, Плекс, Плекси, Плексити, Перплексити | **Perplexity** → use `perplexity_submit` / `perplexity_status` |
+| Перп, Плекс, Плекси, Плексити, Перплексити | **Perplexity** → use `perplexity_submit_question` / `perplexity_get_answer` |
 
 ## Core rule
 
@@ -30,7 +30,7 @@ Perplexity’s web index is your **primary RAG** — richer than Cursor web sear
 **Order of work:**
 
 1. **Gather** (repo and/or user text — see workflow below)
-2. **`perplexity_submit`** with a **complete research brief**, then **`perplexity_status`** with the returned **`chat_id`** until `completed`
+2. **`perplexity_submit_question`** with a **complete research brief**, then **`perplexity_get_answer`** with the returned **`chat_id`** until `completed`
 3. **Then** reason, plan, and act using the result + your context
 
 Built-in web search / crawl are **fallback only** (single URL, broker offline, user says skip).
@@ -66,11 +66,11 @@ Use when the task depends on **this codebase** and you do not yet have the pictu
 **Steps:**
 
 1. **Explore project** — search/read files, `BACKLOG.md`, architecture, related code; collect facts (paths, patterns, constraints).
-2. **`perplexity_submit`** — one structured question that includes:
+2. **`perplexity_submit_question`** — one structured question that includes:
    - **Verbatim user goal** and constraints
    - **What you found in the repo** (files, current behavior, gaps)
    - **What you need from the web** (best practices, API docs, comparisons)
-3. **`perplexity_status`** with the same `chat_id` from step 2 — poll until `completed` or `error`; use `result` when done.
+3. **`perplexity_get_answer`** with the same `chat_id` from step 2 — poll until `completed` or `error`; use `result` when done.
 4. **Then think** — plan, implement, or reply using the result + repo facts.
 
 ### B — Incoming info is already clear (Perplexity first)
@@ -83,7 +83,7 @@ Use when the user gave a **self-contained** question (no deep repo archaeology n
 
 **Steps:**
 
-1. **`perplexity_submit` then `perplexity_status`** — pack **all** incoming info into the question (task, constraints, options, what you already assume). Poll status until `completed` or `error`.
+1. **`perplexity_submit_question` then `perplexity_get_answer`** — pack **all** incoming info into the question (task, constraints, options, what you already assume). Poll status until `completed` or `error`.
 2. **Then think** — reason and execute using the result.
 
 If mid-task you discover **project-specific** unknowns → switch to **workflow A** (quick repo scan → second submit **without** `chat_id` if the topic is new).
@@ -94,8 +94,8 @@ If mid-task you discover **project-specific** unknowns → switch to **workflow 
 
 **Two tools only** (no `perplexity_ask`; parameters are `question` and `chat_id` only):
 
-1. **`perplexity_submit`** — `question` + optional **`chat_id`**. Returns **`chat_id`** (Perplexity thread URL) when the prompt is sent.
-2. **`perplexity_status`** — required **`chat_id`**; one call returns UI state and, when ready, **`result`**.
+1. **`perplexity_submit_question`** — `question` + optional **`chat_id`**. Returns **`chat_id`** (Perplexity thread URL) when the prompt is sent.
+2. **`perplexity_get_answer`** — required **`chat_id`**; one call returns UI state and, when ready, **`result`**.
 
 ### `chat_id` rules (important)
 
@@ -110,11 +110,11 @@ Poll every few seconds until `status` is `completed` or `error`. Compare `visibl
 
 | Tool | Parameter | Default | Notes |
 |------|-----------|---------|--------|
-| `perplexity_submit` | `question` | required | Full brief (MCP appends: answer in chat, no files) |
-| `perplexity_submit` | `chat_id` | — | Omit = new topic; set = continue that chat |
-| `perplexity_submit` | `format` | `markdown` | `markdown` or `text` |
-| `perplexity_status` | `chat_id` | required | Same id returned by submit |
-| `perplexity_status` | `format` | `markdown` | Same as submit |
+| `perplexity_submit_question` | `question` | required | Full brief (MCP appends: answer in chat, no files) |
+| `perplexity_submit_question` | `chat_id` | — | Omit = new topic; set = continue that chat |
+| `perplexity_submit_question` | `format` | `markdown` | `markdown` or `text` |
+| `perplexity_get_answer` | `chat_id` | required | Same id returned by submit |
+| `perplexity_get_answer` | `format` | `markdown` | Same as submit |
 
 **Research brief template** (paste and fill):
 
@@ -132,9 +132,9 @@ Research needed:
 Output: [bullet summary / comparison table / step-by-step / citations]
 ```
 
-**Verify MCP build:** call `perplexity_broker_info` → must show `mcp_version` **0.4.2+** and `prompt_suffix_on_submit: true` after Reload Window.
+**Verify MCP build:** call `perplexity_broker_info` → must show `mcp_version` **0.4.3+** and `prompt_suffix_on_submit: true` after Reload Window.
 
-**Submit success:** `{ "ok": true, "mcp_version": "0.4.2", "chat_id": "https://…", "status": "running", "prompt_suffix_applied": true }`
+**Submit success:** `{ "ok": true, "mcp_version": "0.4.3", "chat_id": "https://…", "status": "running", "prompt_suffix_applied": true }`
 
 The suffix is appended **inside MCP** (not visible in the `question` arg in Cursor UI). In Perplexity the user message must end with `----` and the in-chat-only instruction.
 
@@ -174,10 +174,10 @@ Broker repo: `retail-perplexity-mcp` (this workspace).
 
 ## Maintainer reference (editing this broker only)
 
-Cursor → `perplexity_submit` / `perplexity_status` → broker `:3317` → Playwright → Camoufox → Perplexity UI.
+Cursor → `perplexity_submit_question` / `perplexity_get_answer` → broker `:3317` → Playwright → Camoufox → Perplexity UI.
 
 Packages: `apps/broker`, `apps/mcp-server`, `packages/playwright-worker`, `packages/ui-selectors`, `packages/ui-state`, `packages/core`, `packages/types`.
 
-Agents: **`perplexity_submit`** — no `chat_id` = new topic; with `chat_id` = same chat. **`perplexity_status`** reads UI by `chat_id`. HTTP `POST /chat/send`, `POST /thread/status`.
+Agents: **`perplexity_submit_question`** — no `chat_id` = new topic; with `chat_id` = same chat. **`perplexity_get_answer`** reads UI by `chat_id`. HTTP `POST /chat/send`, `POST /thread/status`.
 
 Coding skills: `playwright-best-practices`, `mcp-builder`, `fastify-best-practices`, `nodejs-backend-patterns`.
