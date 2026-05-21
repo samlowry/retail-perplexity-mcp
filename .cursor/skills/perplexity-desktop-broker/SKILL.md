@@ -102,11 +102,19 @@ If mid-task you discover **project-specific** unknowns → switch to **workflow 
 | Submit `chat_id` | Meaning |
 |------------------|---------|
 | **Omitted** | **New topic** (broker starts a new Perplexity thread) |
-| **Set** | **Same chat** — full URL from a prior submit **or** slug only (`abbc8f96-2fbf-…`). Broker opens that thread if the browser tab is elsewhere; if already on that thread, it only sends the message. |
+| **Set** | **Same chat** — full URL from a prior submit **or** slug only (`abbc8f96-2fbf-…`). Broker opens or **reloads** that thread before send/status (unfreezes stuck UI). |
 
 **Follow-up in the same chat:** always pass the **`chat_id`** from the first submit (URL or slug). Never use `thread_url` — that name is removed.
 
-Poll every few seconds until `status` is `completed` or `error`. Compare `visible_chars` across polls while `running`.
+### Status polling schedule (after submit)
+
+Perplexity web UI can freeze; each `perplexity_get_answer` reloads/opens the thread before reading UI.
+
+1. **First check** — wait **30 seconds** after submit, then call `perplexity_get_answer`.
+2. **Then** — poll **every 60 seconds** until **16 minutes** from submit (inclusive: ~1:00, 2:00, … 16:00) **or** until `status` is `completed` or `error`.
+3. While `running`, compare **`visible_chars`** across polls (stuck count + long wait → note in reply).
+
+Do not poll more often than this unless the user asks for faster checks.
 
 | Tool | Parameter | Default | Notes |
 |------|-----------|---------|--------|
