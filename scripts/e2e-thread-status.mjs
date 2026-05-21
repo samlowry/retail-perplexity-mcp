@@ -12,26 +12,23 @@ const ONLY_SMOKE = process.env.ONLY_SMOKE === "1" || process.env.ONLY_SMOKE === 
 /** Pause between cases to reduce Perplexity rate-limit flakes on back-to-back long prompts. */
 const CASE_DELAY_MS = Number(process.env.CASE_DELAY_MS ?? 25000);
 
-/** @type {Array<{ label: string; text: string; newThread: boolean; kind: "short" | "long"; pollMs?: number; maxPolls?: number }>} */
+/** @type {Array<{ label: string; text: string; kind: "short" | "long"; pollMs?: number; maxPolls?: number }>} */
 const allQuestions = [
   {
     label: "short-fact",
     kind: "short",
     text: "What is the capital of Estonia? Reply in one short sentence only.",
-    newThread: true,
   },
   {
     label: "tiny-math",
     kind: "short",
     text: "What is 17 * 23? Reply with the number only.",
-    newThread: true,
   },
   {
     label: "long-rest-graphql",
     kind: "long",
     text:
       "Compare REST vs GraphQL for internal microservices in 2026: tradeoffs, when to pick each, 5 bullet points per side. Use clear headings and be thorough.",
-    newThread: true,
     pollMs: Number(process.env.LONG_POLL_MS ?? 3000),
     maxPolls: Number(process.env.LONG_MAX_POLLS ?? 72),
   },
@@ -40,15 +37,16 @@ const allQuestions = [
     kind: "long",
     text:
       "Explain how CRDTs work for collaborative editing, with 3 common algorithms and pros/cons for each. Multi-paragraph answer with examples.",
-    newThread: true,
     pollMs: Number(process.env.LONG_POLL_MS ?? 3000),
     maxPolls: Number(process.env.LONG_MAX_POLLS ?? 72),
   },
 ];
 
 const ONLY_LABEL = process.env.ONLY_LABEL?.trim();
+const ONLY_FOLLOWUP = process.env.ONLY_FOLLOWUP === "1" || process.env.ONLY_FOLLOWUP === "true";
 
 const questions = allQuestions.filter((q) => {
+  if (ONLY_FOLLOWUP) return false;
   if (ONLY_LABEL) return q.label === ONLY_LABEL;
   if (ONLY_SMOKE) return q.kind === "short";
   if (SKIP_SMOKE) return q.kind === "long";
@@ -121,7 +119,7 @@ async function pollUntilDone(threadUrl, label, opts) {
   for (let i = 1; i <= maxPolls; i++) {
     const st = await post("/thread/status", {
       sessionId: "default",
-      threadUrl,
+      chatId: threadUrl,
       responseFormat: "text",
     });
     const elapsedMs = Date.now() - t0;
@@ -188,7 +186,6 @@ async function main() {
     const sub = await post("/chat/send", {
       sessionId: "default",
       text: q.text,
-      newThread: q.newThread,
     });
     console.log(`  thread_url: ${sub.threadUrl}`);
     console.log(`  submit_ms: ${Date.now() - t0}`);
@@ -198,6 +195,38 @@ async function main() {
       maxPolls: q.maxPolls,
     });
     results.push({ label: q.label, kind: q.kind, ...out });
+  }
+
+  if (ONLY_FOLLOWUP || (!ONLY_LABEL && !ONLY_SMOKE)) {
+    console.log("\n=== followup-same-chat: submit with chat_id ===");
+    const seed = await post("/chat/send", {
+      sessionId: "default",
+      text: "Say hello in exactly one word.",
+    });
+    const seedOut = await pollUntilDone(seed.threadUrl, "followup-seed", {
+      kind: "short",
+      maxPolls: 12,
+    });
+    if (!seedOut.ok) {
+      results.push({ label: "followup-same-chat", kind: "short", ...seedOut });
+    } else {
+      const slug = seed.threadUrl.replace(/.*\/search\//, "");
+      const sub2 = await post("/chat/send", {
+        sessionId: "default",
+        text: "Now reply with only the word PONG.",
+        chatId: slug,
+      });
+      if (sub2.threadUrl !== seed.threadUrl) {
+        throw new Error(
+          `followup chat_id should stay on same thread: ${sub2.threadUrl} vs ${seed.threadUrl}`,
+        );
+      }
+      const out2 = await pollUntilDone(sub2.threadUrl, "followup-same-chat", {
+        kind: "short",
+        maxPolls: 12,
+      });
+      results.push({ label: "followup-same-chat", kind: "short", ...out2 });
+    }
   }
 
   console.log("\n=== SUMMARY ===");

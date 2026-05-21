@@ -30,7 +30,7 @@ Perplexity’s web index is your **primary RAG** — richer than Cursor web sear
 **Order of work:**
 
 1. **Gather** (repo and/or user text — see workflow below)
-2. **`perplexity_submit`** with a **complete research brief**, then **`perplexity_status`** until `completed`
+2. **`perplexity_submit`** with a **complete research brief**, then **`perplexity_status`** with the returned **`chat_id`** until `completed`
 3. **Then** reason, plan, and act using the result + your context
 
 Built-in web search / crawl are **fallback only** (single URL, broker offline, user says skip).
@@ -70,7 +70,7 @@ Use when the task depends on **this codebase** and you do not yet have the pictu
    - **Verbatim user goal** and constraints
    - **What you found in the repo** (files, current behavior, gaps)
    - **What you need from the web** (best practices, API docs, comparisons)
-3. **`perplexity_status`** with `thread_url` from step 2 — poll every few seconds until `status` is `completed` or `error`; use `result` when done.
+3. **`perplexity_status`** with the same `chat_id` from step 2 — poll until `completed` or `error`; use `result` when done.
 4. **Then think** — plan, implement, or reply using the result + repo facts.
 
 ### B — Incoming info is already clear (Perplexity first)
@@ -86,25 +86,34 @@ Use when the user gave a **self-contained** question (no deep repo archaeology n
 1. **`perplexity_submit` then `perplexity_status`** — pack **all** incoming info into the question (task, constraints, options, what you already assume). Poll status until `completed` or `error`.
 2. **Then think** — reason and execute using the result.
 
-If mid-task you discover **project-specific** unknowns → switch to **workflow A** (quick repo scan → second submit with `new_chat: true` if topic shifted).
+If mid-task you discover **project-specific** unknowns → switch to **workflow A** (quick repo scan → second submit **without** `chat_id` if the topic is new).
 
 ---
 
 ## How to call Perplexity MCP
 
-**Two tools only** (no `perplexity_ask`, no `job_id`):
+**Two tools only** (no `perplexity_ask`, no `new_chat` flag):
 
-1. **`perplexity_submit`** — returns `thread_url` when the prompt is on the page (task id).
-2. **`perplexity_status`** — pass that `thread_url`; one call returns UI state and, when ready, **`result`** in the same JSON.
+1. **`perplexity_submit`** — `question` + optional **`chat_id`**. Returns **`chat_id`** (Perplexity thread URL) when the prompt is sent.
+2. **`perplexity_status`** — required **`chat_id`**; one call returns UI state and, when ready, **`result`**.
 
-Poll every few seconds until `status` is `completed` or `error`. Do not hold one MCP call open for the whole generation. Compare `visible_chars` across polls to see progress while `running`.
+### `chat_id` rules (important)
+
+| Submit `chat_id` | Meaning |
+|------------------|---------|
+| **Omitted** | **New topic** (broker starts a new Perplexity thread) |
+| **Set** | **Same chat** — full URL from a prior submit **or** slug only (`abbc8f96-2fbf-…`). Broker opens that thread if the browser tab is elsewhere; if already on that thread, it only sends the message. |
+
+**Follow-up in the same chat:** always pass the **`chat_id`** from the first submit. Do **not** rely on `new_chat: false` — that parameter no longer exists.
+
+Poll every few seconds until `status` is `completed` or `error`. Compare `visible_chars` across polls while `running`.
 
 | Tool | Parameter | Default | Notes |
 |------|-----------|---------|--------|
-| `perplexity_submit` | `question` | required | **Full brief** — template below |
-| `perplexity_submit` | `new_chat` | `false` | `true` for unrelated topic |
-| `perplexity_submit` | `format` | `markdown` | `markdown` or `text` when completed |
-| `perplexity_status` | `thread_url` | required | From submit response |
+| `perplexity_submit` | `question` | required | Full brief (MCP appends: answer in chat, no files) |
+| `perplexity_submit` | `chat_id` | — | Omit = new topic; set = continue that chat |
+| `perplexity_submit` | `format` | `markdown` | `markdown` or `text` |
+| `perplexity_status` | `chat_id` | required | Same id returned by submit |
 | `perplexity_status` | `format` | `markdown` | Same as submit |
 
 **Research brief template** (paste and fill):
@@ -123,13 +132,13 @@ Research needed:
 Output: [bullet summary / comparison table / step-by-step / citations]
 ```
 
-**Submit success:** `{ "ok": true, "thread_url": "https://…", "status": "running" }`
+**Submit success:** `{ "ok": true, "chat_id": "https://www.perplexity.ai/search/…", "status": "running" }`
 
-**Status while running:** `{ "ok": true, "thread_url": "…", "status": "running", "visible_chars": 1204 }`
+**Status while running:** `{ "ok": true, "chat_id": "…", "status": "running", "visible_chars": 1204 }`
 
-**Status completed:** `{ "ok": true, "thread_url": "…", "status": "completed", "result": "…", "sources"?, "timings_ms"? }`
+**Status completed:** `{ "ok": true, "chat_id": "…", "status": "completed", "result": "…", "sources"?, "timings_ms"? }`
 
-**Status error (Perplexity/UI):** `{ "ok": true, "thread_url": "…", "status": "error", "code": "…", "error_message": "…" }`
+**Status error (Perplexity/UI):** `{ "ok": true, "chat_id": "…", "status": "error", "code": "…", "error_message": "…" }`
 
 **Tool failure (broker down, etc.):** `{ "ok": false, "code": "…", "message": "…" }`
 
@@ -165,6 +174,6 @@ Cursor → `perplexity_submit` / `perplexity_status` → broker `:3317` → Play
 
 Packages: `apps/broker`, `apps/mcp-server`, `packages/playwright-worker`, `packages/ui-selectors`, `packages/ui-state`, `packages/core`, `packages/types`.
 
-Agents: **`perplexity_submit`** returns `thread_url`; **`perplexity_status`** reads UI (stateless, no job store). HTTP `POST /thread/status` for dev.
+Agents: **`perplexity_submit`** — no `chat_id` = new topic; with `chat_id` = same chat. **`perplexity_status`** reads UI by `chat_id`. HTTP `POST /chat/send`, `POST /thread/status`.
 
 Coding skills: `playwright-best-practices`, `mcp-builder`, `fastify-best-practices`, `nodejs-backend-patterns`.

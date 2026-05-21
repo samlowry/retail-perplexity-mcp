@@ -36,17 +36,24 @@ After changes: **Reload Window** in Cursor so MCP/skills refresh.
 
 ## Two-command flow
 
-1. **`perplexity_submit`** — sends the prompt; returns **`thread_url`** when submit finished (sync until Perplexity thread URL is known). MCP does not wait for the full answer.
-2. **`perplexity_status`** — pass the same **`thread_url`**; broker opens that thread if needed, reads UI, returns status and payload in one call.
+1. **`perplexity_submit`** — `question` + optional **`chat_id`**. Returns **`chat_id`** (Perplexity thread URL) when the prompt is on the page.
+2. **`perplexity_status`** — same **`chat_id`** until `completed` or `error`.
 
-Poll every few seconds until `status` is `completed` or `error`. No broker-side job list or timeout — the agent decides when to stop polling.
+### Chat targeting
+
+| `chat_id` on submit | Behavior |
+|---------------------|----------|
+| **Omitted** | New Perplexity topic |
+| **Set** (full URL or slug from prior submit) | Follow-up in that chat; broker opens the thread only if the tab is on another page |
+
+Poll every few seconds. No broker job store or timeout — you decide when to stop.
 
 ## MCP tools
 
 | Tool | Purpose |
 |------|---------|
-| `perplexity_submit` | Submit question; returns `thread_url` (task id) |
-| `perplexity_status` | Status + result/error/visible_chars by `thread_url` |
+| `perplexity_submit` | Send question; returns `chat_id` |
+| `perplexity_status` | Status + `result` / errors by `chat_id` |
 
 Session bootstrap runs inside the broker; `session_id` is always `default` and is not exposed on MCP.
 
@@ -54,15 +61,15 @@ Session bootstrap runs inside the broker; `session_id` is always `default` and i
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `question` | string | (required) | Prompt text |
-| `new_chat` | boolean | `false` | Start a new Perplexity thread before sending |
+| `question` | string | (required) | Prompt (MCP appends in-chat-only instruction after `----`) |
+| `chat_id` | string | — | Thread URL or slug; **omit for new topic** |
 | `format` | `markdown` \| `text` | `markdown` | Answer format when completed |
 
 ### `perplexity_status` parameters
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `thread_url` | string | (required) | URL from `perplexity_submit` |
+| `chat_id` | string | (required) | From `perplexity_submit` (URL or slug) |
 | `format` | `markdown` \| `text` | `markdown` | Answer format when completed |
 
 ### Response JSON (text content)
@@ -70,35 +77,33 @@ Session bootstrap runs inside the broker; `session_id` is always `default` and i
 Submit success:
 
 ```json
-{ "ok": true, "thread_url": "https://www.perplexity.ai/search/…", "status": "running" }
+{ "ok": true, "chat_id": "https://www.perplexity.ai/search/…", "status": "running" }
 ```
 
 Status while running:
 
 ```json
-{ "ok": true, "thread_url": "https://…", "status": "running", "visible_chars": 1204 }
+{ "ok": true, "chat_id": "https://…", "status": "running", "visible_chars": 1204 }
 ```
 
 Status when completed:
 
 ```json
-{ "ok": true, "thread_url": "https://…", "status": "completed", "result": "…", "timings_ms": { … } }
+{ "ok": true, "chat_id": "https://…", "status": "completed", "result": "…", "timings_ms": { … } }
 ```
 
 Status when Perplexity/UI error:
 
 ```json
-{ "ok": true, "thread_url": "https://…", "status": "error", "code": "NEEDS_LOGIN", "error_message": "…" }
+{ "ok": true, "chat_id": "https://…", "status": "error", "code": "NEEDS_LOGIN", "error_message": "…" }
 ```
 
-Broker unreachable (tool failure):
+Broker unreachable:
 
 ```json
 { "ok": false, "code": "BROKER_OFFLINE", "message": "…" }
 ```
 
-Agent-facing error codes: `NEEDS_LOGIN`, `BROKER_OFFLINE`, `BUSY`, `RATE_LIMITED`, `UI_CHANGED`, `FAILED`.
+`visible_chars` — length of answer text visible on the page (compare across polls for progress).
 
-`visible_chars` is the length of answer text visible on the page — compare across polls to see progress.
-
-HTTP routes: `/health`, `/chat/send`, `/thread/status`, etc. on the broker for doctor and development.
+HTTP: `/health`, `/chat/send`, `/thread/status` on the broker.

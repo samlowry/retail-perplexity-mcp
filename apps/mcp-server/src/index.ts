@@ -12,13 +12,14 @@ import {
   toAgentErrorCode,
   type ThreadStatusSuccess,
 } from "./broker-client.js";
+import { appendChatOutputInstruction } from "./prompt-suffix.js";
 
 const SESSION_ID = "default";
 
 /** MCP tools return JSON in text content. */
 type AgentToolSuccess = {
   ok: true;
-  thread_url: string;
+  chat_id: string;
   status: "running" | "completed" | "error";
   result?: string;
   error_message?: string;
@@ -33,7 +34,7 @@ type AgentToolFailure = {
   ok: false;
   code: string;
   message: string;
-  thread_url?: string;
+  chat_id?: string;
 };
 
 function agentJsonContent(payload: AgentToolSuccess | AgentToolFailure) {
@@ -52,9 +53,9 @@ async function ensureBrokerHealthy(): Promise<AgentToolFailure | null> {
   return null;
 }
 
-function failureFromError(error: unknown, threadUrl?: string): AgentToolFailure {
+function failureFromError(error: unknown, chatId?: string): AgentToolFailure {
   if (error instanceof BrokerNetworkError) {
-    return { ok: false, code: "BROKER_OFFLINE", message: error.message, thread_url: threadUrl };
+    return { ok: false, code: "BROKER_OFFLINE", message: error.message, chat_id: chatId };
   }
   if (error instanceof BrokerRequestError) {
     const brokerError = parseBrokerErrorBody(error.body);
@@ -67,13 +68,13 @@ function failureFromError(error: unknown, threadUrl?: string): AgentToolFailure 
       typeof (error.body as { message: unknown }).message === "string"
         ? (error.body as { message: string }).message
         : "Request failed");
-    return { ok: false, code, message, thread_url: threadUrl };
+    return { ok: false, code, message, chat_id: chatId };
   }
   return {
     ok: false,
     code: "FAILED",
     message: error instanceof Error ? error.message : String(error),
-    thread_url: threadUrl,
+    chat_id: chatId,
   };
 }
 
@@ -83,7 +84,7 @@ function statusPayloadFromBroker(
 ): AgentToolSuccess {
   const base = {
     ok: true as const,
-    thread_url: result.threadUrl,
+    chat_id: result.threadUrl,
     visible_chars: result.visibleChars,
     last_ui_state: result.lastUiState,
   };
@@ -121,24 +122,24 @@ function statusPayloadFromBroker(
 }
 
 const questionSchema = z.string().min(1);
-const newChatSchema = z.boolean().optional().default(false);
+const chatIdSchema = z.string().min(1).optional();
 const formatSchema = z.enum(["markdown", "text"]).optional().default("markdown");
-const threadUrlSchema = z.string().url();
+const chatIdRequiredSchema = z.string().min(1);
 
 const server = new McpServer({
   name: "perplexity-desktop-broker",
-  version: "0.3.0",
+  version: "0.4.0",
 });
 
 server.tool(
   "perplexity_submit",
-  "Send a question to Perplexity. Returns thread_url when the prompt is submitted (use as task id for perplexity_status). Does not wait for the full answer.",
+  "Send a question to Perplexity. Optional chat_id (thread URL or search slug from a prior submit) continues that chat; omit chat_id for a new topic. Returns chat_id when the prompt is submitted; poll with perplexity_status.",
   {
     question: questionSchema,
-    new_chat: newChatSchema,
+    chat_id: chatIdSchema,
     format: formatSchema,
   },
-  async ({ question, new_chat, format }) => {
+  async ({ question, chat_id, format }) => {
     const offline = await ensureBrokerHealthy();
     if (offline) return agentJsonContent(offline);
 
@@ -147,31 +148,31 @@ server.tool(
         method: "POST",
         body: JSON.stringify({
           sessionId: SESSION_ID,
-          text: question,
-          newThread: new_chat,
+          text: appendChatOutputInstruction(question),
+          chatId: chat_id,
           responseFormat: format,
         }),
       });
 
       return agentJsonContent({
         ok: true,
-        thread_url: result.threadUrl,
+        chat_id: result.threadUrl,
         status: "running",
       });
     } catch (error) {
-      return agentJsonContent(failureFromError(error));
+      return agentJsonContent(failureFromError(error, chat_id));
     }
   },
 );
 
 server.tool(
   "perplexity_status",
-  "Check a submitted task by thread_url. Opens the Perplexity thread if needed. status: running | completed | error; result and error_message when applicable; visible_chars for progress while running.",
+  "Check a submitted task by chat_id (same value returned from perplexity_submit). Opens the Perplexity thread if needed. status: running | completed | error; result when completed; visible_chars while running.",
   {
-    thread_url: threadUrlSchema,
+    chat_id: chatIdRequiredSchema,
     format: formatSchema,
   },
-  async ({ thread_url, format }) => {
+  async ({ chat_id, format }) => {
     const offline = await ensureBrokerHealthy();
     if (offline) return agentJsonContent(offline);
 
@@ -180,14 +181,14 @@ server.tool(
         method: "POST",
         body: JSON.stringify({
           sessionId: SESSION_ID,
-          threadUrl: thread_url,
+          chatId: chat_id,
           responseFormat: format,
         }),
       });
 
       return agentJsonContent(statusPayloadFromBroker(result, format));
     } catch (error) {
-      return agentJsonContent(failureFromError(error, thread_url));
+      return agentJsonContent(failureFromError(error, chat_id));
     }
   },
 );

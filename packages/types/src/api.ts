@@ -26,7 +26,8 @@ export interface ThreadNewResponse {
 export interface ChatSendRequest {
   sessionId: string;
   text: string;
-  newThread?: boolean;
+  /** Full thread URL or search slug; omit to start a new topic. */
+  chatId?: string;
   responseFormat?: ResponseFormatType;
 }
 

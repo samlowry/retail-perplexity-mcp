@@ -72,7 +72,7 @@ export async function createServer() {
     const body = threadStatusBodySchema.parse(request.body);
     const result = await getService().getThreadStatus(
       body.sessionId,
-      body.threadUrl,
+      body.chatId,
       body.responseFormat,
     );
     if ("ok" in result && result.ok === false) {

@@ -5,6 +5,7 @@ import {
   type ChatAnswerResult,
   type ResponseFormatType,
 } from "@pdb/types";
+import { checkAuthState } from "@pdb/ui-selectors";
 import { BrowserSessionManager } from "./session.js";
 import { newThread } from "./thread.js";
 import { cancelGeneration, sendPrompt, waitForCompletion } from "./chat.js";
@@ -54,23 +55,66 @@ export class PlaywrightWorker {
 
   /**
    * Submit a prompt without waiting for generation to finish.
-   * Captures thread URL for later poll/navigation (multitask sidebar topics).
+   * With threadUrl: open that chat if needed, then send. Without: start a new topic.
    */
   async submitPrompt(
     text: string,
-    options: { newThread?: boolean },
+    options: { threadUrl?: string },
   ): Promise<{ threadUrl: string } | BrokerError> {
-    const page = this.session.getPage();
-    if (!page) {
-      return {
-        ok: false,
-        code: BrokerErrorCode.SESSION_BROKEN,
-        message: "No browser page",
-      };
-    }
-
     try {
-      if (options.newThread) await newThread(page);
+      if (options.threadUrl) {
+        const ready = await this.ensureBrowserReady();
+        if (!("ok" in ready) || ready.ok !== true) {
+          return ready as BrokerError;
+        }
+        const page = this.session.getPage();
+        if (!page) {
+          return {
+            ok: false,
+            code: BrokerErrorCode.SESSION_BROKEN,
+            message: "No browser page",
+          };
+        }
+        await openThreadUrl(page, options.threadUrl);
+        const auth = await checkAuthState(page);
+        if (!auth.loggedIn) {
+          return {
+            ok: false,
+            code: BrokerErrorCode.AUTH_REQUIRED,
+            message: auth.reason ?? "Login required in Perplexity profile",
+            lastUiState: "auth_expired",
+          };
+        }
+      } else {
+        const session = await this.ensureSession();
+        if (session.error) return session.error;
+        if (!session.loggedIn) {
+          return {
+            ok: false,
+            code: BrokerErrorCode.AUTH_REQUIRED,
+            message: "Login required in Perplexity profile",
+            lastUiState: "auth_expired",
+          };
+        }
+        const page = this.session.getPage();
+        if (!page) {
+          return {
+            ok: false,
+            code: BrokerErrorCode.SESSION_BROKEN,
+            message: "No browser page",
+          };
+        }
+        await newThread(page);
+      }
+
+      const page = this.session.getPage();
+      if (!page) {
+        return {
+          ok: false,
+          code: BrokerErrorCode.SESSION_BROKEN,
+          message: "No browser page",
+        };
+      }
       const sendStart = Date.now();
       await sendPrompt(page, text);
       const sendMs = Date.now() - sendStart;
@@ -83,7 +127,10 @@ export class PlaywrightWorker {
       if (typeof error === "object" && error !== null && "ok" in error) {
         return error as BrokerError;
       }
-      const artifacts = await captureArtifacts(page, this.config.artifactsDir, "submit-error");
+      const failPage = this.session.getPage();
+      const artifacts = failPage
+        ? await captureArtifacts(failPage, this.config.artifactsDir, "submit-error")
+        : { screenshot: undefined, htmlSnapshot: undefined };
       return {
         ok: false,
         code: BrokerErrorCode.PROMPT_SEND_FAILED,

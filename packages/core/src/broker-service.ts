@@ -2,6 +2,7 @@ import {
   BrokerErrorCode,
   isBrokerError,
   ThreadTaskStatus,
+  normalizeChatId,
   type BrokerError,
   type ChatSendRequest,
   type HealthResponse,
@@ -63,12 +64,10 @@ export class BrokerService {
     request: ChatSendRequest,
   ): Promise<{ threadUrl: string } | { error: BrokerError }> {
     try {
+      const threadUrl = request.chatId ? normalizeChatId(request.chatId) : undefined;
+
       const result = await this.lock.runExclusive(request.sessionId, async () => {
-        const session = await this.worker.ensureSession();
-        if (session.error) return session.error;
-        return this.worker.submitPrompt(request.text, {
-          newThread: request.newThread,
-        });
+        return this.worker.submitPrompt(request.text, { threadUrl });
       });
 
       if (isBrokerError(result)) {
@@ -84,9 +83,10 @@ export class BrokerService {
   /** Read task status from Perplexity UI for the given thread URL. */
   async getThreadStatus(
     sessionId: string,
-    threadUrl: string,
+    chatId: string,
     responseFormat: ChatSendRequest["responseFormat"] = "markdown",
   ): Promise<ThreadStatusResponse | BrokerError> {
+    const threadUrl = normalizeChatId(chatId);
     try {
       const result = await this.lock.runExclusive(sessionId, async () => {
         const ready = await this.worker.ensureBrowserReady();

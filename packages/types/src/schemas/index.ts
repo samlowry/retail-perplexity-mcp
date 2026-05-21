@@ -20,13 +20,14 @@ export const threadNewBodySchema = z.object({
 export const chatSendBodySchema = z.object({
   sessionId: sessionIdSchema,
   text: z.string().min(1),
-  newThread: z.boolean().optional(),
+  chatId: z.string().min(1).optional(),
   responseFormat: responseFormatSchema.optional().default("markdown"),
 });
 
 export const threadStatusBodySchema = z.object({
   sessionId: sessionIdSchema,
-  threadUrl: z.string().url(),
+  /** Full thread URL or search slug (same as MCP chat_id). */
+  chatId: z.string().min(1),
   responseFormat: responseFormatSchema.optional().default("markdown"),
 });
 
