@@ -37,11 +37,4 @@ describe("threadStatusBodySchema", () => {
     expect(parsed.chatId).toBe(url);
   });
 
-  it("accepts legacy threadUrl", () => {
-    const parsed = threadStatusBodySchema.parse({
-      sessionId: "default",
-      threadUrl: url,
-    });
-    expect(parsed.chatId).toBe(url);
-  });
 });

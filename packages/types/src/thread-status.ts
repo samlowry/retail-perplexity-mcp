@@ -12,13 +12,13 @@ export type ThreadTaskStatusType = (typeof ThreadTaskStatus)[keyof typeof Thread
 
 export interface ThreadStatusRequest {
   sessionId: string;
-  threadUrl: string;
+  chatId: string;
   responseFormat?: ResponseFormatType;
 }
 
 export interface ThreadStatusResponse {
   ok: true;
-  threadUrl: string;
+  chatId: string;
   status: ThreadTaskStatusType;
   /** Visible answer text length on page (for progress between polls). */
   visibleChars?: number;
@@ -29,5 +29,5 @@ export interface ThreadStatusResponse {
 
 export interface ChatSubmitResponse {
   ok: true;
-  threadUrl: string;
+  chatId: string;
 }

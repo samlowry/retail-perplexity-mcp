@@ -65,7 +65,7 @@ export async function createServer() {
       const status = error.code === BrokerErrorCode.AUTH_REQUIRED ? 401 : 400;
       return reply.status(status).send(error);
     }
-    return { ok: true, threadUrl: result.threadUrl };
+    return { ok: true, chatId: result.chatId };
   });
 
   app.post("/thread/status", async (request, reply) => {

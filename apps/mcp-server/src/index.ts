@@ -10,14 +10,10 @@ import {
   formatTimingsMs,
   parseBrokerErrorBody,
   toAgentErrorCode,
+  type ChatSubmitSuccess,
   type ThreadStatusSuccess,
 } from "./broker-client.js";
 import { appendChatOutputInstruction } from "./prompt-suffix.js";
-import {
-  chatIdOptionalParams,
-  chatIdRequiredParams,
-  resolveChatIdInput,
-} from "./chat-id-params.js";
 
 const SESSION_ID = "default";
 
@@ -40,16 +36,10 @@ type AgentToolFailure = {
   code: string;
   message: string;
   chat_id?: string;
-  /** Deprecated alias; same as chat_id when present. */
-  thread_url?: string;
 };
 
 function agentJsonContent(payload: AgentToolSuccess | AgentToolFailure) {
-  const withAliases =
-    "chat_id" in payload && payload.chat_id
-      ? { ...payload, thread_url: payload.chat_id }
-      : payload;
-  return { content: [{ type: "text" as const, text: JSON.stringify(withAliases) }] };
+  return { content: [{ type: "text" as const, text: JSON.stringify(payload) }] };
 }
 
 async function ensureBrokerHealthy(): Promise<AgentToolFailure | null> {
@@ -76,7 +66,7 @@ function failureFromError(error: unknown, chatId?: string): AgentToolFailure {
       message = error.body;
     }
     if (!message && error.status === 400) {
-      message = "Invalid request (check chat_id or thread_url is set)";
+      message = "Invalid request (chat_id is required for perplexity_status)";
     }
     if (!message) {
       message =
@@ -103,7 +93,7 @@ function statusPayloadFromBroker(
 ): AgentToolSuccess {
   const base = {
     ok: true as const,
-    chat_id: result.threadUrl,
+    chat_id: result.chatId,
     visible_chars: result.visibleChars,
     last_ui_state: result.lastUiState,
   };
@@ -141,11 +131,13 @@ function statusPayloadFromBroker(
 }
 
 const questionSchema = z.string().min(1);
+const chatIdSchema = z.string().min(1).optional();
+const chatIdRequiredSchema = z.string().min(1);
 const formatSchema = z.enum(["markdown", "text"]).optional().default("markdown");
 
 const server = new McpServer({
   name: "perplexity-desktop-broker",
-  version: "0.4.0",
+  version: "0.4.1",
 });
 
 server.tool(
@@ -153,32 +145,27 @@ server.tool(
   "Send a question to Perplexity. Optional chat_id (thread URL or search slug from a prior submit) continues that chat; omit chat_id for a new topic. Returns chat_id when the prompt is submitted; poll with perplexity_status.",
   {
     question: questionSchema,
-    ...chatIdOptionalParams,
+    chat_id: chatIdSchema,
     format: formatSchema,
   },
-  async ({ question, chat_id, thread_url, format }) => {
+  async ({ question, chat_id, format }) => {
     const offline = await ensureBrokerHealthy();
     if (offline) return agentJsonContent(offline);
 
-    const resolved = resolveChatIdInput({ chat_id, thread_url }, "perplexity_submit");
-    if (!resolved.ok) {
-      return agentJsonContent({ ok: false, code: "FAILED", message: resolved.message });
-    }
-
     try {
-      const result = await brokerFetch<{ ok: true; threadUrl: string }>("/chat/send", {
+      const result = await brokerFetch<ChatSubmitSuccess>("/chat/send", {
         method: "POST",
         body: JSON.stringify({
           sessionId: SESSION_ID,
           text: appendChatOutputInstruction(question),
-          chatId: resolved.chatId,
+          chatId: chat_id,
           responseFormat: format,
         }),
       });
 
       return agentJsonContent({
         ok: true,
-        chat_id: result.threadUrl,
+        chat_id: result.chatId,
         status: "running",
       });
     } catch (error) {
@@ -189,39 +176,28 @@ server.tool(
 
 server.tool(
   "perplexity_status",
-  "Check a submitted task by chat_id or thread_url (same id from perplexity_submit). Opens the Perplexity thread if needed. status: running | completed | error; result when completed; visible_chars while running.",
+  "Check a submitted task by chat_id (from perplexity_submit). Opens the Perplexity thread if needed. status: running | completed | error; result when completed; visible_chars while running.",
   {
-    ...chatIdRequiredParams,
+    chat_id: chatIdRequiredSchema,
     format: formatSchema,
   },
-  async ({ chat_id, thread_url, format }) => {
+  async ({ chat_id, format }) => {
     const offline = await ensureBrokerHealthy();
     if (offline) return agentJsonContent(offline);
-
-    const resolved = resolveChatIdInput({ chat_id, thread_url }, "perplexity_status");
-    if (!resolved.ok) {
-      return agentJsonContent({
-        ok: false,
-        code: "FAILED",
-        message: resolved.message,
-        chat_id: chat_id ?? thread_url,
-        thread_url: thread_url ?? chat_id,
-      });
-    }
 
     try {
       const result = await brokerFetch<ThreadStatusSuccess>("/thread/status", {
         method: "POST",
         body: JSON.stringify({
           sessionId: SESSION_ID,
-          chatId: resolved.chatId,
+          chatId: chat_id,
           responseFormat: format,
         }),
       });
 
       return agentJsonContent(statusPayloadFromBroker(result, format));
     } catch (error) {
-      return agentJsonContent(failureFromError(error, resolved.chatId));
+      return agentJsonContent(failureFromError(error, chat_id));
     }
   },
 );

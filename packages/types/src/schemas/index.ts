@@ -24,22 +24,11 @@ export const chatSendBodySchema = z.object({
   responseFormat: responseFormatSchema.optional().default("markdown"),
 });
 
-/** Accept chatId or legacy threadUrl (agents may still send thread_url). */
-export const threadStatusBodySchema = z
-  .object({
-    sessionId: sessionIdSchema,
-    chatId: z.string().min(1).optional(),
-    threadUrl: z.string().min(1).optional(),
-    responseFormat: responseFormatSchema.optional().default("markdown"),
-  })
-  .refine((body) => Boolean(body.chatId?.trim() || body.threadUrl?.trim()), {
-    message: "chatId or threadUrl is required",
-  })
-  .transform((body) => ({
-    sessionId: body.sessionId,
-    chatId: (body.chatId ?? body.threadUrl)!.trim(),
-    responseFormat: body.responseFormat,
-  }));
+export const threadStatusBodySchema = z.object({
+  sessionId: sessionIdSchema,
+  chatId: z.string().min(1),
+  responseFormat: responseFormatSchema.optional().default("markdown"),
+});
 
 export const chatCancelBodySchema = z.object({
   sessionId: sessionIdSchema,

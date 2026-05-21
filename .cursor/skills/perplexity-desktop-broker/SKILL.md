@@ -92,7 +92,7 @@ If mid-task you discover **project-specific** unknowns → switch to **workflow 
 
 ## How to call Perplexity MCP
 
-**Two tools only** (no `perplexity_ask`, no `new_chat` flag):
+**Two tools only** (no `perplexity_ask`; parameters are `question` and `chat_id` only):
 
 1. **`perplexity_submit`** — `question` + optional **`chat_id`**. Returns **`chat_id`** (Perplexity thread URL) when the prompt is sent.
 2. **`perplexity_status`** — required **`chat_id`**; one call returns UI state and, when ready, **`result`**.
@@ -104,7 +104,7 @@ If mid-task you discover **project-specific** unknowns → switch to **workflow 
 | **Omitted** | **New topic** (broker starts a new Perplexity thread) |
 | **Set** | **Same chat** — full URL from a prior submit **or** slug only (`abbc8f96-2fbf-…`). Broker opens that thread if the browser tab is elsewhere; if already on that thread, it only sends the message. |
 
-**Follow-up in the same chat:** always pass the **`chat_id`** from the first submit. Do **not** rely on `new_chat: false` — that parameter no longer exists.
+**Follow-up in the same chat:** always pass the **`chat_id`** from the first submit (URL or slug). Never use `thread_url` — that name is removed.
 
 Poll every few seconds until `status` is `completed` or `error`. Compare `visible_chars` across polls while `running`.
 

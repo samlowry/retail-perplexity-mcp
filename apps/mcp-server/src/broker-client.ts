@@ -25,12 +25,12 @@ export class BrokerRequestError extends Error {
 
 export interface ChatSubmitSuccess {
   ok: true;
-  threadUrl: string;
+  chatId: string;
 }
 
 export interface ThreadStatusSuccess {
   ok: true;
-  threadUrl: string;
+  chatId: string;
   status: ThreadTaskStatusType;
   visibleChars?: number;
   answer?: ChatAnswerResult;

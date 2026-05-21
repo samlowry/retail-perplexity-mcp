@@ -62,7 +62,7 @@ export class BrokerService {
    */
   async submitChat(
     request: ChatSendRequest,
-  ): Promise<{ threadUrl: string } | { error: BrokerError }> {
+  ): Promise<{ chatId: string } | { error: BrokerError }> {
     try {
       const threadUrl = request.chatId ? normalizeChatId(request.chatId) : undefined;
 
@@ -74,7 +74,7 @@ export class BrokerService {
         return { error: result };
       }
 
-      return { threadUrl: result.threadUrl };
+      return { chatId: result.threadUrl };
     } catch (error) {
       return { error: this.errorFromThrown(error) };
     }
@@ -101,7 +101,7 @@ export class BrokerService {
       if (result.status === ThreadTaskStatus.ERROR && result.error) {
         return {
           ok: true,
-          threadUrl,
+          chatId: threadUrl,
           status: ThreadTaskStatus.ERROR,
           visibleChars: result.visibleChars,
           error: result.error,
@@ -112,7 +112,7 @@ export class BrokerService {
       if (result.status === ThreadTaskStatus.RUNNING) {
         return {
           ok: true,
-          threadUrl,
+          chatId: threadUrl,
           status: ThreadTaskStatus.RUNNING,
           visibleChars: result.visibleChars,
           lastUiState: result.lastUiState,
@@ -121,7 +121,7 @@ export class BrokerService {
 
       return {
         ok: true,
-        threadUrl,
+        chatId: threadUrl,
         status: ThreadTaskStatus.COMPLETED,
         visibleChars: result.visibleChars,
         answer: result.answer,

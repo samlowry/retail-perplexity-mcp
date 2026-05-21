@@ -187,9 +187,9 @@ async function main() {
       sessionId: "default",
       text: q.text,
     });
-    console.log(`  thread_url: ${sub.threadUrl}`);
+    console.log(`  chat_id: ${sub.chatId}`);
     console.log(`  submit_ms: ${Date.now() - t0}`);
-    const out = await pollUntilDone(sub.threadUrl, q.label, {
+    const out = await pollUntilDone(sub.chatId, q.label, {
       kind: q.kind,
       pollMs: q.pollMs,
       maxPolls: q.maxPolls,
@@ -203,25 +203,25 @@ async function main() {
       sessionId: "default",
       text: "Say hello in exactly one word.",
     });
-    const seedOut = await pollUntilDone(seed.threadUrl, "followup-seed", {
+    const seedOut = await pollUntilDone(seed.chatId, "followup-seed", {
       kind: "short",
       maxPolls: 12,
     });
     if (!seedOut.ok) {
       results.push({ label: "followup-same-chat", kind: "short", ...seedOut });
     } else {
-      const slug = seed.threadUrl.replace(/.*\/search\//, "");
+      const slug = seed.chatId.replace(/.*\/search\//, "");
       const sub2 = await post("/chat/send", {
         sessionId: "default",
         text: "Now reply with only the word PONG.",
         chatId: slug,
       });
-      if (sub2.threadUrl !== seed.threadUrl) {
+      if (sub2.chatId !== seed.chatId) {
         throw new Error(
-          `followup chat_id should stay on same thread: ${sub2.threadUrl} vs ${seed.threadUrl}`,
+          `followup chat_id should stay on same thread: ${sub2.chatId} vs ${seed.chatId}`,
         );
       }
-      const out2 = await pollUntilDone(sub2.threadUrl, "followup-same-chat", {
+      const out2 = await pollUntilDone(sub2.chatId, "followup-same-chat", {
         kind: "short",
         maxPolls: 12,
       });

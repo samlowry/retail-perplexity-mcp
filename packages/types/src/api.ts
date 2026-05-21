@@ -33,7 +33,7 @@ export interface ChatSendRequest {
 
 export interface ChatSendResponse {
   ok: true;
-  threadUrl: string;
+  chatId: string;
 }
 
 export interface ChatCancelRequest {
