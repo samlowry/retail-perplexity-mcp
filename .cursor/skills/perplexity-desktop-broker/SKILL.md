@@ -8,10 +8,19 @@ description: >-
   codebase first, then Perplexity with full brief, then reason. If the user
   request is self-contained, Perplexity first with all incoming info, then
   reason. Perplexity web index acts as RAG and improves thinking quality.
+  User may say Perplexity as: Перп, Плекс, Плекси, Плексити, Перплексити — same MCP.
   Also when editing retail-perplexity-mcp broker/MCP code.
 ---
 
 # Research before you think (Perplexity MCP)
+
+## Names (same service)
+
+The user may refer to this research path without saying “Perplexity”:
+
+| Synonym | Treat as |
+|---------|----------|
+| Перп, Плекс, Плекси, Плексити, Перплексити | **Perplexity** → use `perplexity_ask` |
 
 ## Core rule
 
