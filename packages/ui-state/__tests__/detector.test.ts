@@ -68,4 +68,11 @@ describe("detectUiState on HTML fixtures", () => {
     await page.close();
     expect(result.state).toBe(UiState.RATE_LIMITED);
   });
+
+  it("treats stop button as generating when answer mentions rate limiting", async () => {
+    const page = await loadFixture("generating-rate-limit-topic.html");
+    const result = await detectUiState(page);
+    await page.close();
+    expect(result.state).toBe(UiState.GENERATING);
+  });
 });

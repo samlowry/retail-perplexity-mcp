@@ -20,11 +20,6 @@ export function getLastKnownUiState(): UiStateType {
 export async function detectUiState(page: Page): Promise<UiDetectionResult> {
   const bodyText = await page.locator("body").innerText().catch(() => "");
 
-  if (/rate limit|too many requests/i.test(bodyText)) {
-    lastKnownState = UiState.RATE_LIMITED;
-    return { state: UiState.RATE_LIMITED };
-  }
-
   if (/network error|failed to load|something went wrong/i.test(bodyText)) {
     lastKnownState = UiState.NETWORK_ERROR;
     return { state: UiState.NETWORK_ERROR };
@@ -58,6 +53,12 @@ export async function detectUiState(page: Page): Promise<UiDetectionResult> {
   if (stopVisible) {
     lastKnownState = UiState.GENERATING;
     return { state: UiState.GENERATING };
+  }
+
+  // After stop is gone: avoid matching "rate limiting" inside long answers while streaming.
+  if (/rate limit exceeded|too many requests/i.test(bodyText)) {
+    lastKnownState = UiState.RATE_LIMITED;
+    return { state: UiState.RATE_LIMITED };
   }
 
   const auth = await checkAuthState(page);

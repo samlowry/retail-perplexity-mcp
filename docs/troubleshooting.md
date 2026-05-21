@@ -6,7 +6,7 @@
 | `SESSION_BROKEN` | Restart broker; run `ensure_session` |
 | `UI_CHANGED` | Update selectors/fixtures; see runbook |
 | `GENERATION_TIMEOUT` | Increase `DEFAULT_TIMEOUT_MS`; check network |
-| `RATE_LIMITED` | Wait and retry |
+| `RATE_LIMITED` | Wait and retry. If it appears mid-generation on long answers, rebuild broker — older detectors matched "rate limiting" inside answer text. |
 | `CONFLICT` | Another job holds session; use queue or wait |
 
 Artifacts: `./data/artifacts/`
