@@ -1,120 +1,143 @@
 ---
 name: perplexity-desktop-broker
 description: >-
-  Primary web research for the agent: use MCP tool perplexity_ask instead of
-  built-in web search, web fetch, or shallow crawling when you need information
-  you do not know or want to validate facts you already have. Perplexity gives
-  far richer synthesis and citations than primitive browser/search tools.
-  Also use when maintaining this repo (broker, worker, MCP, selectors).
+  Mandatory research-before-reasoning workflow. Activate whenever you need to
+  think, plan, decide, design, compare options, investigate, or implement
+  something non-trivial — before drawing conclusions, use MCP perplexity_ask
+  (not built-in web search/crawl). If project context is unclear, explore the
+  codebase first, then Perplexity with full brief, then reason. If the user
+  request is self-contained, Perplexity first with all incoming info, then
+  reason. Perplexity web index acts as RAG and improves thinking quality.
+  Also when editing retail-perplexity-mcp broker/MCP code.
 ---
 
-# Perplexity — primary web research (agent)
+# Research before you think (Perplexity MCP)
 
-## When to use (mandatory preference)
+## Core rule
 
-Use **`perplexity_ask`** (MCP) as the **default** way to get information from the web in this project.
+**Do not “think from memory” on substantive tasks.**  
+Perplexity’s web index is your **primary RAG** — richer than Cursor web search, fetch, or crawl.
 
-| Situation | Use `perplexity_ask` | Avoid instead |
-|-----------|----------------------|---------------|
-| You **do not know** a fact, API, version, policy, competitor, error message | Yes | Guessing, stale training data, single-page `WebFetch` |
-| You need **breadth** (overview, comparisons, “what is current best practice”) | Yes | One-off search snippets |
-| You want to **validate** something you think you know (release date, pricing, breaking change) | Yes — ask Perplexity to confirm with sources | Assuming memory is correct |
-| You need **citations / sources** for a claim | Yes | Undocumented assertions |
-| Quick read of a **URL you already have** | Optional: fetch tools OK for raw HTML | `perplexity_ask` for whole-site crawl |
-| Editing **this repo’s code** | Use repo sections below + normal tools | `perplexity_ask` for TypeScript facts unless verifying external docs |
+**Order of work:**
 
-Built-in **web search**, **web crawl**, and similar Cursor tools are **much weaker** than a full Perplexity answer (multi-source synthesis, follow-ups, Pro/Sonar models in the logged-in UI). Prefer Perplexity unless the task is strictly “download this one page.”
+1. **Gather** (repo and/or user text — see workflow below)
+2. **`perplexity_ask`** with a **complete research brief**
+3. **Then** reason, plan, and act using Perplexity’s answer + your context
 
-**Prerequisites (human / environment, not agent tools):**
+Built-in web search / crawl are **fallback only** (single URL, broker offline, user says skip).
 
-1. Broker running: `http://127.0.0.1:3317` (e.g. `node apps/broker/dist/index.js` from repo root).
-2. MCP server `perplexity-broker` enabled in Cursor (project `.cursor/mcp.json`).
-3. One-time login in headed Camoufox (`HEADLESS=0`); profile under `./data/profile`.
+---
 
-## How to call (only MCP surface)
+## When this skill applies (activate every time)
 
-**Tool:** `perplexity_ask`
+Use this workflow when the task involves **any** of:
 
-| Parameter | Default | Use |
-|-----------|---------|-----|
-| `question` | required | Full research or validation prompt; be specific |
-| `new_chat` | `false` | `true` for unrelated topic (fresh thread) |
-| `timeout_seconds` | `180` | Long research → 180–300 |
-| `format` | `markdown` | `text` if you need plain string |
+- Planning, architecture, tradeoffs, “how should we…”
+- Facts you are not 100% sure about (versions, APIs, policies, best practices)
+- Validating a belief before committing code or advice
+- Comparing tools, libraries, approaches
+- Debugging unclear errors (especially external services)
+- Implementation that depends on **current** web/docs reality
+- Any non-trivial answer where being wrong is costly
 
-**Success** (JSON in tool result):
+**Skip Perplexity only when:** purely local edit with full context in front of you (rename, format, obvious typo), or user explicitly says no research, or `BROKER_OFFLINE` and user accepts proceed without web RAG.
 
-```json
-{
-  "ok": true,
-  "answer": "...",
-  "sources": [],
-  "timings_ms": {}
-}
+---
+
+## Choose workflow A or B
+
+### A — Project context not obvious (search the repo first)
+
+Use when the task depends on **this codebase** and you do not yet have the picture:
+
+- “Fix X in the broker”, “add feature like Y here”, “why does our worker…”
+- User points at a repo path or uses project-specific names without full spec
+- You need conventions, existing modules, env, or how something is wired today
+
+**Steps:**
+
+1. **Explore project** — search/read files, `BACKLOG.md`, architecture, related code; collect facts (paths, patterns, constraints).
+2. **`perplexity_ask`** — one structured question that includes:
+   - **Verbatim user goal** and constraints
+   - **What you found in the repo** (files, current behavior, gaps)
+   - **What you need from the web** (best practices, API docs, comparisons)
+3. **Then think** — plan, implement, or reply using Perplexity + repo facts.
+
+### B — Incoming info is already clear (Perplexity first)
+
+Use when the user gave a **self-contained** question (no deep repo archaeology needed first):
+
+- General tech comparison, “what is X in 2026”, validate a claim, market/policy facts
+- Strategy or design question where repo is irrelevant
+- User pasted enough context (spec, errors, links)
+
+**Steps:**
+
+1. **`perplexity_ask` immediately** — pack **all** incoming info into the question (task, constraints, options, what you already assume).
+2. **Then think** — reason and execute using the answer.
+
+If mid-task you discover **project-specific** unknowns → switch to **workflow A** (quick repo scan → second `perplexity_ask` with `new_chat: true` if topic shifted).
+
+---
+
+## How to call `perplexity_ask`
+
+| Parameter | Default | Notes |
+|-----------|---------|--------|
+| `question` | required | **Full brief**, not a one-liner — see template below |
+| `new_chat` | `false` | `true` for unrelated topic |
+| `timeout_seconds` | `180` | Complex research → 240–300 |
+| `format` | `markdown` | |
+
+**Research brief template** (paste and fill):
+
+```text
+Context: [user task, constraints, deadline, stack if known]
+
+What I already know:
+- [from user message]
+- [from repo exploration, if workflow A]
+
+Research needed:
+- [specific questions]
+- [verify / disprove assumptions]
+
+Output: [bullet summary / comparison table / step-by-step / citations]
 ```
 
-**Planned (not in MVP yet):** `model_used`, `reasoning_enabled` on success — see backlog Epic L.
+**Response:** `{ ok, answer, sources?, timings_ms? }` or `{ ok: false, code, message }`.
 
-**Failure** (act on `code`):
+| Code | Action |
+|------|--------|
+| `NEEDS_LOGIN` | User logs in Camoufox window, retry |
+| `BROKER_OFFLINE` | User starts broker from repo root (see below) |
+| `BUSY` | Wait; one ask at a time |
+| `TIMEOUT` | Narrow question or raise `timeout_seconds` |
+| `FAILED` | Report; retry once if transient |
 
-| Code | Agent action |
-|------|----------------|
-| `NEEDS_LOGIN` | Tell user to log in in the Camoufox window, then retry |
-| `BROKER_OFFLINE` | Tell user to start broker on 3317 |
-| `BUSY` | Wait and retry; do not parallelize multiple asks |
-| `TIMEOUT` | Narrow question, increase `timeout_seconds`, or `new_chat: true` |
-| `FAILED` | Report `message`; check `docs/troubleshooting.md` if developing |
+Do **not** use removed MCP tools (`perplexity_health`, `perplexity_ensure_session`, …).
 
-Do **not** call removed tools (`perplexity_health`, `perplexity_ensure_session`, etc.). Bootstrap is internal.
+---
 
-## Prompt patterns
+## Environment (human)
 
-**Discovery** (unknown info):
+Broker repo: `retail-perplexity-mcp` (this workspace).
 
-> What is [X]? Include current status, main options, and caveats. Cite sources.
+1. Broker: `http://127.0.0.1:3317` — from **repo root**: `node apps/broker/dist/index.js`
+2. MCP: `perplexity-broker` in `.cursor/mcp.json` or global `~/.cursor/mcp.json`
+3. Profile: absolute `PROFILE_DIR` in `.env` (see `docs/runbook.md`)
+4. Login once in headed Camoufox if `NEEDS_LOGIN`
 
-**Validation** (known info):
+**Planned:** `model_used` / `reasoning_enabled` in response — Epic L in `docs/BACKLOG.md`.
 
-> I believe [claim]. Verify against recent sources; say if wrong and why.
+---
 
-**Repo / tech** (when docs matter):
+## Maintainer reference (editing this broker only)
 
-> For [library] version [Y]: official migration steps and breaking changes.
+Cursor → `perplexity_ask` → broker `:3317` → Playwright → Camoufox → Perplexity UI.
 
-Use `new_chat: true` when switching domain (e.g. SEO → Playwright).
+Packages: `apps/broker`, `apps/mcp-server`, `packages/playwright-worker`, `packages/ui-selectors`, `packages/ui-state`, `packages/core`, `packages/types`.
 
-## Model and reasoning (current gap)
+HTTP routes for dev/doctor only; agents use **`perplexity_ask`** only.
 
-There is **no** programmatic control yet for which Perplexity **model** or **reasoning** mode is active, and answers do **not** yet echo `model_used` / `reasoning_enabled`.
-
-Until Epic L ships: model/reasoning follow whatever is selected in the **browser UI** (user may set default in Perplexity). Track implementation in `docs/BACKLOG.md` (Epic L).
-
-## Maintainer reference (this repo only)
-
-Use the sections below when **changing** the broker, not for ordinary research.
-
-### Architecture
-
-Cursor → MCP (`perplexity_ask`) → HTTP broker `127.0.0.1:3317` → Playwright worker → Camoufox → Perplexity web UI. Persistent profile; manual login once.
-
-### Layout
-
-`apps/broker`, `apps/mcp-server`, `apps/doctor`, `packages/core`, `packages/playwright-worker`, `packages/ui-selectors`, `packages/ui-state`, `packages/types`, `docs/`.
-
-### HTTP (doctor / dev)
-
-`/health`, `/session/ensure`, `/chat/send`, `/chat/cancel`, `/thread/new`, `/attachment/upload`, `/job/:id` — see `docs/BACKLOG.md`.
-
-### Invariants
-
-- One tab per session; one in-flight generation (`CONCURRENT_REQUEST_POLICY=reject` by default).
-- All selectors in `packages/ui-selectors/`; UI states in `packages/ui-state/`.
-- MCP stays thin; session ensure runs inside broker `sendChat`.
-
-### Config (`.env`)
-
-`BROWSER_ENGINE=camoufox`, `HEADLESS=0`, `PROFILE_DIR=./data/profile`, `ALLOW_MODEL_SWITCH=1` (switch not implemented yet).
-
-### Related skills (coding)
-
-`playwright-best-practices`, `mcp-builder`, `nodejs-backend-patterns`, `fastify-best-practices`, `api-design-principles`.
+Coding skills: `playwright-best-practices`, `mcp-builder`, `fastify-best-practices`, `nodejs-backend-patterns`.
