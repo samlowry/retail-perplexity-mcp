@@ -43,7 +43,7 @@ server.tool(
   {
     question: z.string().min(1),
     new_chat: z.boolean().optional().default(false),
-    timeout_seconds: z.number().positive().optional().default(180),
+    timeout_seconds: z.number().positive().optional().default(600),
     format: z.enum(["markdown", "text"]).optional().default("markdown"),
   },
   async ({ question, new_chat, timeout_seconds, format }) => {

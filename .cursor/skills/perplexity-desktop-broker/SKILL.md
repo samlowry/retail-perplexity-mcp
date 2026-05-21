@@ -95,7 +95,7 @@ If mid-task you discover **project-specific** unknowns → switch to **workflow 
 |-----------|---------|--------|
 | `question` | required | **Full brief**, not a one-liner — see template below |
 | `new_chat` | `false` | `true` for unrelated topic |
-| `timeout_seconds` | `180` | Complex research → 240–300 |
+| `timeout_seconds` | `600` (10 min) | Only lower for quick pings |
 | `format` | `markdown` | |
 
 **Research brief template** (paste and fill):

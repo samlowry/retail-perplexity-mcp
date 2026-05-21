@@ -18,7 +18,7 @@ export function loadConfig(cwd = process.cwd()): WorkerConfig {
     perplexityUrl: process.env.PERPLEXITY_URL ?? "https://www.perplexity.ai/",
     browserEngine: parseBrowserEngine(),
     headless: process.env.HEADLESS === "1",
-    defaultTimeoutMs: Number(process.env.DEFAULT_TIMEOUT_MS ?? "180000"),
+    defaultTimeoutMs: Number(process.env.DEFAULT_TIMEOUT_MS ?? "600000"),
     allowFileUpload: process.env.ALLOW_FILE_UPLOAD !== "0",
     allowModelSwitch: process.env.ALLOW_MODEL_SWITCH !== "0",
   };

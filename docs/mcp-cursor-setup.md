@@ -42,7 +42,7 @@ The MCP server exposes one tool for agents. Session bootstrap (`/session/ensure`
 |-----------|------|---------|-------------|
 | `question` | string | (required) | Prompt text |
 | `new_chat` | boolean | `false` | Start a new Perplexity thread before sending |
-| `timeout_seconds` | number | `180` | Max wait for the answer |
+| `timeout_seconds` | number | `600` (10 min) | Max wait for the answer |
 | `format` | `markdown` \| `text` | `markdown` | Answer format |
 
 Response is JSON in the tool text content:
