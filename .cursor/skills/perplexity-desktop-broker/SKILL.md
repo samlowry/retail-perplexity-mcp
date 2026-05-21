@@ -132,7 +132,11 @@ Research needed:
 Output: [bullet summary / comparison table / step-by-step / citations]
 ```
 
-**Submit success:** `{ "ok": true, "chat_id": "https://www.perplexity.ai/search/…", "status": "running" }`
+**Verify MCP build:** call `perplexity_broker_info` → must show `mcp_version` **0.4.2+** and `prompt_suffix_on_submit: true` after Reload Window.
+
+**Submit success:** `{ "ok": true, "mcp_version": "0.4.2", "chat_id": "https://…", "status": "running", "prompt_suffix_applied": true }`
+
+The suffix is appended **inside MCP** (not visible in the `question` arg in Cursor UI). In Perplexity the user message must end with `----` and the in-chat-only instruction.
 
 **Status while running:** `{ "ok": true, "chat_id": "…", "status": "running", "visible_chars": 1204 }`
 

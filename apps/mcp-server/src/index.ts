@@ -13,15 +13,19 @@ import {
   type ChatSubmitSuccess,
   type ThreadStatusSuccess,
 } from "./broker-client.js";
-import { appendChatOutputInstruction } from "./prompt-suffix.js";
+import { CHAT_OUTPUT_INSTRUCTION_SEPARATOR, prepareSubmitPrompt } from "./prompt-suffix.js";
+import { MCP_VERSION } from "./version.js";
 
 const SESSION_ID = "default";
 
 /** MCP tools return JSON in text content. */
 type AgentToolSuccess = {
   ok: true;
+  mcp_version: string;
   chat_id: string;
   status: "running" | "completed" | "error";
+  /** True when in-chat-only suffix was appended on submit (check mcp_version). */
+  prompt_suffix_applied?: boolean;
   result?: string;
   error_message?: string;
   visible_chars?: number;
@@ -93,6 +97,7 @@ function statusPayloadFromBroker(
 ): AgentToolSuccess {
   const base = {
     ok: true as const,
+    mcp_version: MCP_VERSION,
     chat_id: result.chatId,
     visible_chars: result.visibleChars,
     last_ui_state: result.lastUiState,
@@ -137,8 +142,30 @@ const formatSchema = z.enum(["markdown", "text"]).optional().default("markdown")
 
 const server = new McpServer({
   name: "perplexity-desktop-broker",
-  version: "0.4.1",
+  version: MCP_VERSION,
 });
+
+server.tool(
+  "perplexity_broker_info",
+  "Broker/MCP build info: mcp_version, prompt suffix behavior. Call to verify Cursor loaded the latest MCP after Reload Window.",
+  {},
+  async () => {
+    return {
+      content: [
+        {
+          type: "text" as const,
+          text: JSON.stringify({
+            ok: true,
+            mcp_version: MCP_VERSION,
+            prompt_suffix_on_submit: true,
+            suffix_separator: CHAT_OUTPUT_INSTRUCTION_SEPARATOR,
+            tools: ["perplexity_submit", "perplexity_status", "perplexity_broker_info"],
+          }),
+        },
+      ],
+    };
+  },
+);
 
 server.tool(
   "perplexity_submit",
@@ -153,11 +180,16 @@ server.tool(
     if (offline) return agentJsonContent(offline);
 
     try {
+      const prepared = prepareSubmitPrompt(question);
+      console.error(
+        `[perplexity-broker mcp ${MCP_VERSION}] submit chars=${prepared.text.length} suffix_applied=${prepared.suffixApplied}`,
+      );
+
       const result = await brokerFetch<ChatSubmitSuccess>("/chat/send", {
         method: "POST",
         body: JSON.stringify({
           sessionId: SESSION_ID,
-          text: appendChatOutputInstruction(question),
+          text: prepared.text,
           chatId: chat_id,
           responseFormat: format,
         }),
@@ -165,8 +197,10 @@ server.tool(
 
       return agentJsonContent({
         ok: true,
+        mcp_version: MCP_VERSION,
         chat_id: result.chatId,
         status: "running",
+        prompt_suffix_applied: prepared.suffixApplied,
       });
     } catch (error) {
       return agentJsonContent(failureFromError(error, chat_id));
