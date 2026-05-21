@@ -9,7 +9,7 @@ description: >-
   request is self-contained, Perplexity first with all incoming info, then
   reason. Perplexity web index acts as RAG and improves thinking quality.
   User may say Perplexity as: Перп, Плекс, Плекси, Плексити, Перплексити — same MCP.
-  Also when editing retail-perplexity-mcp broker/MCP code.
+  Works globally when perplexity-broker MCP is enabled. Also when editing retail-perplexity-mcp broker/MCP code.
 ---
 
 # Research before you think (Perplexity MCP)
@@ -70,7 +70,8 @@ Use when the task depends on **this codebase** and you do not yet have the pictu
    - **Verbatim user goal** and constraints
    - **What you found in the repo** (files, current behavior, gaps)
    - **What you need from the web** (best practices, API docs, comparisons)
-3. **Then think** — plan, implement, or reply using Perplexity + repo facts.
+3. **`perplexity_status`** with `thread_url` from step 2 — poll every few seconds until `status` is `completed` or `error`; use `result` when done.
+4. **Then think** — plan, implement, or reply using the result + repo facts.
 
 ### B — Incoming info is already clear (Perplexity first)
 
@@ -91,14 +92,20 @@ If mid-task you discover **project-specific** unknowns → switch to **workflow 
 
 ## How to call Perplexity MCP
 
-**Research flow:** `perplexity_submit` → poll `perplexity_status` with `thread_url` until `status: completed` or `error`. Do not hold one MCP call open for the whole generation.
+**Two tools only** (no `perplexity_ask`, no `job_id`):
 
-| Parameter | Default | Notes |
-|-----------|---------|--------|
-| `question` | required | **Full brief**, not a one-liner — see template below |
-| `new_chat` | `false` | `true` for unrelated topic |
-| `format` | `markdown` | |
-| `thread_url` | — | `perplexity_status` only (from submit) |
+1. **`perplexity_submit`** — returns `thread_url` when the prompt is on the page (task id).
+2. **`perplexity_status`** — pass that `thread_url`; one call returns UI state and, when ready, **`result`** in the same JSON.
+
+Poll every few seconds until `status` is `completed` or `error`. Do not hold one MCP call open for the whole generation. Compare `visible_chars` across polls to see progress while `running`.
+
+| Tool | Parameter | Default | Notes |
+|------|-----------|---------|--------|
+| `perplexity_submit` | `question` | required | **Full brief** — template below |
+| `perplexity_submit` | `new_chat` | `false` | `true` for unrelated topic |
+| `perplexity_submit` | `format` | `markdown` | `markdown` or `text` when completed |
+| `perplexity_status` | `thread_url` | required | From submit response |
+| `perplexity_status` | `format` | `markdown` | Same as submit |
 
 **Research brief template** (paste and fill):
 
@@ -116,19 +123,26 @@ Research needed:
 Output: [bullet summary / comparison table / step-by-step / citations]
 ```
 
-**Response:** `{ ok, answer, sources?, timings_ms? }` or `{ ok: false, code, message }`.
+**Submit success:** `{ "ok": true, "thread_url": "https://…", "status": "running" }`
 
-| Code | Action |
-|------|--------|
-| `NEEDS_LOGIN` | User logs in Camoufox window, retry |
-| `BROKER_OFFLINE` | User starts broker from repo root (see below) |
-| `BUSY` | Wait; one ask at a time |
-| `TIMEOUT` | Narrow question or raise `timeout_seconds`; use submit+status for long jobs |
-| `RATE_LIMITED` | Back off and retry later |
-| `UI_CHANGED` | Perplexity DOM changed; report to maintainer |
-| `FAILED` | Report; retry once if transient |
+**Status while running:** `{ "ok": true, "thread_url": "…", "status": "running", "visible_chars": 1204 }`
 
-Do **not** use removed MCP tools (`perplexity_health`, `perplexity_ensure_session`, …).
+**Status completed:** `{ "ok": true, "thread_url": "…", "status": "completed", "result": "…", "sources"?, "timings_ms"? }`
+
+**Status error (Perplexity/UI):** `{ "ok": true, "thread_url": "…", "status": "error", "code": "…", "error_message": "…" }`
+
+**Tool failure (broker down, etc.):** `{ "ok": false, "code": "…", "message": "…" }`
+
+| Code | When | Action |
+|------|------|--------|
+| `NEEDS_LOGIN` | `status: error` or `ok: false` | User logs in Camoufox window, retry |
+| `BROKER_OFFLINE` | `ok: false` | Start broker (see below); Reload Window in Cursor |
+| `BUSY` | `ok: false` | Wait; broker serializes browser ops |
+| `RATE_LIMITED` | `status: error` | Back off and retry later |
+| `UI_CHANGED` | `status: error` | Perplexity DOM changed; report to maintainer |
+| `FAILED` | other | Report; retry once if transient |
+
+Do **not** use removed tools (`perplexity_ask`, `perplexity_health`, `perplexity_ensure_session`, …).
 
 ---
 
