@@ -42,6 +42,16 @@ Same flow as macOS. Use headed Camoufox (`HEADLESS=0`), run `pnpm camoufox:fetch
 
 See [docs/BACKLOG.md](docs/BACKLOG.md) and [.cursor/skills/perplexity-desktop-broker/SKILL.md](.cursor/skills/perplexity-desktop-broker/SKILL.md).
 
+## macOS: broker at login
+
+Install a user LaunchAgent so the HTTP broker starts when you log in (MCP is still started by Cursor):
+
+```bash
+pnpm build && pnpm launchd:install
+```
+
+Full paths, architecture, logs, and uninstall: **[docs/launchd-macos.md](docs/launchd-macos.md)**.
+
 ## MCP in Cursor
 
 See [docs/mcp-cursor-setup.md](docs/mcp-cursor-setup.md). Example config: [.cursor/mcp.json](.cursor/mcp.json).
@@ -53,6 +63,8 @@ Agents use a single MCP tool, **`perplexity_ask`** (`question`, optional `new_ch
 | Script | Description |
 |--------|-------------|
 | `pnpm dev:broker` | Start HTTP broker |
+| `pnpm launchd:install` | macOS: broker at user login (LaunchAgent) |
+| `pnpm launchd:uninstall` | Remove LaunchAgent |
 | `pnpm dev:mcp` | Start MCP server (stdio) |
 | `pnpm doctor` | Environment and session checks |
 | `pnpm test` | Unit tests |

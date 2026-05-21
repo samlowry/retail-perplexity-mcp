@@ -17,6 +17,8 @@
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "smoke:worker": "pnpm --filter @pdb/playwright-worker smoke",
     "camoufox:fetch": "pnpm --filter @pdb/playwright-worker exec camoufox-js fetch",
+    "launchd:install": "bash scripts/install-launch-agent.sh",
+    "launchd:uninstall": "bash scripts/uninstall-launch-agent.sh",
     "typecheck": "pnpm -r run typecheck"
   },
   "devDependencies": {

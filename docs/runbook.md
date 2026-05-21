@@ -17,6 +17,17 @@ pnpm dev:broker
 
 Profile is preserved under `./data/profile`. Cookies are not wiped on restart.
 
+## Start broker at macOS login
+
+Install a user LaunchAgent (broker only; MCP stays Cursor-managed):
+
+```bash
+pnpm build
+pnpm launchd:install
+```
+
+See [launchd-macos.md](./launchd-macos.md) for architecture (broker vs MCP), installed paths (`~/Library/LaunchAgents/…`), verify, logs, and uninstall.
+
 ## UI_CHANGED
 
 1. Check `data/artifacts/` for screenshot and HTML snapshot
