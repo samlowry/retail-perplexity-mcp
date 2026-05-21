@@ -1,5 +1,5 @@
 import type { BrokerError } from "./errors.js";
-import type { JobRecord, JobStatusType } from "./jobs.js";
+import type { AgentGenerationStatusType, JobRecord, JobStatusType } from "./jobs.js";
 import type { ChatAnswerResult, ResponseFormatType } from "./chat.js";
 
 export interface SessionEnsureRequest {
@@ -63,6 +63,17 @@ export interface AttachmentUploadResponse {
 export interface JobGetResponse {
   ok: true;
   job: JobRecord;
+}
+
+export interface JobPollResponse {
+  ok: true;
+  jobId: string;
+  status: AgentGenerationStatusType;
+  threadUrl?: string;
+  answer?: ChatAnswerResult;
+  error?: BrokerError;
+  brokerStatus: JobStatusType;
+  lastUiState?: string;
 }
 
 export interface HealthResponse {

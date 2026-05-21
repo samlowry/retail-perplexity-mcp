@@ -56,7 +56,7 @@ Full paths, architecture, logs, and uninstall: **[docs/launchd-macos.md](docs/la
 
 See [docs/mcp-cursor-setup.md](docs/mcp-cursor-setup.md). Example config: [.cursor/mcp.json](.cursor/mcp.json).
 
-Agents use a single MCP tool, **`perplexity_ask`** (`question`, optional `new_chat`, `timeout_seconds`, `format`). The broker HTTP API is unchanged for doctor/dev workflows.
+Agents use MCP tools **`perplexity_submit`** + **`perplexity_status`** for long or concurrent research, or blocking **`perplexity_ask`** for short asks. See [docs/mcp-cursor-setup.md](docs/mcp-cursor-setup.md).
 
 ## Scripts
 

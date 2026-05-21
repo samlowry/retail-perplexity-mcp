@@ -30,6 +30,17 @@ export interface ChatSendSuccess {
   answer: ChatAnswerResult;
 }
 
+export interface JobPollSuccess {
+  ok: true;
+  jobId: string;
+  status: "generating" | "finished";
+  threadUrl?: string;
+  answer?: ChatAnswerResult;
+  error?: BrokerError;
+  brokerStatus: string;
+  lastUiState?: string;
+}
+
 /** Returns false when fetch fails or health reports down. */
 export async function brokerHealth(): Promise<boolean> {
   try {
@@ -89,6 +100,8 @@ export type AgentErrorCode =
   | "BROKER_OFFLINE"
   | "BUSY"
   | "TIMEOUT"
+  | "RATE_LIMITED"
+  | "UI_CHANGED"
   | "FAILED";
 
 /** Map broker error codes to agent-facing MCP codes. */
@@ -100,6 +113,14 @@ export function toAgentErrorCode(brokerCode: string | undefined): AgentErrorCode
       return "TIMEOUT";
     case BrokerErrorCode.CONFLICT:
       return "BUSY";
+    case BrokerErrorCode.RATE_LIMITED:
+      return "RATE_LIMITED";
+    case BrokerErrorCode.UI_CHANGED:
+    case BrokerErrorCode.PROMPT_SEND_FAILED:
+    case BrokerErrorCode.EXTRACTION_FAILED:
+      return "UI_CHANGED";
+    case BrokerErrorCode.NETWORK_ERROR:
+      return "FAILED";
     default:
       return "FAILED";
   }

@@ -28,6 +28,15 @@ export interface JobTimings {
   extractMs?: number;
 }
 
+/** Agent-facing generation phase (MCP poll/submit). */
+export const AgentGenerationStatus = {
+  GENERATING: "generating",
+  FINISHED: "finished",
+} as const;
+
+export type AgentGenerationStatusType =
+  (typeof AgentGenerationStatus)[keyof typeof AgentGenerationStatus];
+
 export interface JobRecord {
   jobId: string;
   sessionId: string;
@@ -36,6 +45,8 @@ export interface JobRecord {
   payload: Record<string, unknown>;
   timeoutMs: number;
   idempotencyKey?: string;
+  /** Perplexity thread URL captured after prompt submit (stable per job, not used as job id). */
+  threadUrl?: string;
   createdAt: string;
   updatedAt: string;
   result?: unknown;

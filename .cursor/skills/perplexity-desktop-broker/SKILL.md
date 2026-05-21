@@ -89,14 +89,19 @@ If mid-task you discover **project-specific** unknowns → switch to **workflow 
 
 ---
 
-## How to call `perplexity_ask`
+## How to call Perplexity MCP
+
+**Long research or concurrent tasks:** `perplexity_submit` → poll `perplexity_status` with `job_id` until `status: finished`. Do not hold one MCP call open for the whole generation.
+
+**Short blocking ask:** `perplexity_ask` (waits until answer; may hit Cursor MCP client timeout before broker timeout).
 
 | Parameter | Default | Notes |
 |-----------|---------|--------|
 | `question` | required | **Full brief**, not a one-liner — see template below |
 | `new_chat` | `false` | `true` for unrelated topic |
-| `timeout_seconds` | `600` (10 min) | Only lower for quick pings |
+| `timeout_seconds` | `900` (15 min) | Seconds; broker uses `× 1000` ms. Env `DEFAULT_TIMEOUT_MS` is ms |
 | `format` | `markdown` | |
+| `job_id` | — | `perplexity_status` only |
 
 **Research brief template** (paste and fill):
 
@@ -121,7 +126,9 @@ Output: [bullet summary / comparison table / step-by-step / citations]
 | `NEEDS_LOGIN` | User logs in Camoufox window, retry |
 | `BROKER_OFFLINE` | User starts broker from repo root (see below) |
 | `BUSY` | Wait; one ask at a time |
-| `TIMEOUT` | Narrow question or raise `timeout_seconds` |
+| `TIMEOUT` | Narrow question or raise `timeout_seconds`; use submit+status for long jobs |
+| `RATE_LIMITED` | Back off and retry later |
+| `UI_CHANGED` | Perplexity DOM changed; report to maintainer |
 | `FAILED` | Report; retry once if transient |
 
 Do **not** use removed MCP tools (`perplexity_health`, `perplexity_ensure_session`, …).
@@ -143,10 +150,10 @@ Broker repo: `retail-perplexity-mcp` (this workspace).
 
 ## Maintainer reference (editing this broker only)
 
-Cursor → `perplexity_ask` → broker `:3317` → Playwright → Camoufox → Perplexity UI.
+Cursor → `perplexity_submit` / `perplexity_status` / `perplexity_ask` → broker `:3317` → Playwright → Camoufox → Perplexity UI.
 
 Packages: `apps/broker`, `apps/mcp-server`, `packages/playwright-worker`, `packages/ui-selectors`, `packages/ui-state`, `packages/core`, `packages/types`.
 
-HTTP routes for dev/doctor only; agents use **`perplexity_ask`** only.
+Agents: prefer **`perplexity_submit` + `perplexity_status`** for long waits; HTTP `GET /job/:id` polls UI for dev.
 
 Coding skills: `playwright-best-practices`, `mcp-builder`, `fastify-best-practices`, `nodejs-backend-patterns`.

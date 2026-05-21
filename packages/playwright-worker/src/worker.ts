@@ -8,7 +8,10 @@ import {
 import { BrowserSessionManager } from "./session.js";
 import { newThread } from "./thread.js";
 import { cancelGeneration, sendPrompt, waitForCompletion } from "./chat.js";
+import { extractAnswerResult, openThreadUrl, pollGenerationPhase } from "./generation.js";
 import { getLastAnswer } from "./extract.js";
+import { waitForUiState } from "@pdb/ui-state";
+import { UiState } from "@pdb/ui-state";
 import { uploadFile } from "./attachment.js";
 import type { WorkerConfig } from "./types.js";
 import { captureArtifacts } from "./artifacts.js";
@@ -35,6 +38,104 @@ export class PlaywrightWorker {
     const page = this.session.getPage();
     if (!page) throw new Error("Session not initialized");
     await newThread(page);
+  }
+
+  /**
+   * Submit a prompt without waiting for generation to finish.
+   * Captures thread URL for later poll/navigation (multitask sidebar topics).
+   */
+  async submitPrompt(
+    text: string,
+    options: { newThread?: boolean },
+  ): Promise<{ threadUrl: string } | BrokerError> {
+    const page = this.session.getPage();
+    if (!page) {
+      return {
+        ok: false,
+        code: BrokerErrorCode.SESSION_BROKEN,
+        message: "No browser page",
+      };
+    }
+
+    try {
+      if (options.newThread) await newThread(page);
+      const sendStart = Date.now();
+      await sendPrompt(page, text);
+      const sendMs = Date.now() - sendStart;
+      void sendMs;
+
+      await waitForUiState(page, [UiState.GENERATING, UiState.COMPLETE, UiState.READY], 10_000);
+      const threadUrl = page.url();
+      return { threadUrl };
+    } catch (error) {
+      if (typeof error === "object" && error !== null && "ok" in error) {
+        return error as BrokerError;
+      }
+      const artifacts = await captureArtifacts(page, this.config.artifactsDir, "submit-error");
+      return {
+        ok: false,
+        code: BrokerErrorCode.PROMPT_SEND_FAILED,
+        message: error instanceof Error ? error.message : String(error),
+        artifacts: {
+          screenshot: artifacts.screenshot,
+          htmlSnapshot: artifacts.htmlSnapshot,
+        },
+      };
+    }
+  }
+
+  /** Open job thread URL if needed and return generating vs finished without blocking for completion. */
+  async pollJobGeneration(
+    threadUrl: string | undefined,
+  ): Promise<
+    | { phase: "generating" | "finished"; uiState: string; error?: BrokerError }
+    | BrokerError
+  > {
+    const page = this.session.getPage();
+    if (!page) {
+      return {
+        ok: false,
+        code: BrokerErrorCode.SESSION_BROKEN,
+        message: "No browser page",
+      };
+    }
+
+    if (threadUrl) {
+      await openThreadUrl(page, threadUrl);
+    }
+
+    const poll = await pollGenerationPhase(page);
+    return {
+      phase: poll.phase,
+      uiState: poll.uiState,
+      error: poll.error,
+    };
+  }
+
+  /** Extract answer on the current page after generation finished. */
+  async completeJobAnswer(
+    responseFormat: ResponseFormatType,
+    timings: { sendMs: number; generationMs: number },
+  ): Promise<ChatAnswerResult | BrokerError> {
+    const page = this.session.getPage();
+    if (!page) {
+      return {
+        ok: false,
+        code: BrokerErrorCode.SESSION_BROKEN,
+        message: "No browser page",
+      };
+    }
+    const poll = await pollGenerationPhase(page);
+    if (poll.phase !== "finished" || poll.error) {
+      const mapped = poll.error ?? {
+        ok: false as const,
+        code: BrokerErrorCode.UNKNOWN_UI_STATE,
+        message: `Answer not ready in UI state ${poll.uiState}`,
+        lastUiState: poll.uiState,
+      };
+      return mapped;
+    }
+    return extractAnswerResult(page, responseFormat, timings);
   }
 
   async sendPromptAndWait(

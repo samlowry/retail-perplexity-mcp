@@ -41,7 +41,7 @@ export function loadConfig(cwd = process.cwd()): AppConfig {
     profileDir: resolve(cwd, profileDir),
     artifactsDir: resolve(cwd, artifactsDir),
     logLevel: process.env.LOG_LEVEL ?? "info",
-    defaultTimeoutMs: Number(process.env.DEFAULT_TIMEOUT_MS ?? "600000"),
+    defaultTimeoutMs: Number(process.env.DEFAULT_TIMEOUT_MS ?? "900000"),
     headless: parseBool(process.env.HEADLESS, false),
     allowFileUpload: parseBool(process.env.ALLOW_FILE_UPLOAD, true),
     allowModelSwitch: parseBool(process.env.ALLOW_MODEL_SWITCH, true),

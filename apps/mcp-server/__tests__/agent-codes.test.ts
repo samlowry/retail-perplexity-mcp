@@ -15,7 +15,11 @@ describe("toAgentErrorCode", () => {
     expect(toAgentErrorCode(BrokerErrorCode.CONFLICT)).toBe("BUSY");
   });
 
-  it("maps unknown codes to FAILED", () => {
-    expect(toAgentErrorCode(BrokerErrorCode.UI_CHANGED)).toBe("FAILED");
+  it("maps UI_CHANGED to UI_CHANGED", () => {
+    expect(toAgentErrorCode(BrokerErrorCode.UI_CHANGED)).toBe("UI_CHANGED");
+  });
+
+  it("maps RATE_LIMITED to RATE_LIMITED", () => {
+    expect(toAgentErrorCode(BrokerErrorCode.RATE_LIMITED)).toBe("RATE_LIMITED");
   });
 });

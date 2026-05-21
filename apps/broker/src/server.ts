@@ -67,7 +67,7 @@ export async function createServer() {
     return {
       ok: true,
       jobId,
-      status: "succeeded",
+      status: answer ? "succeeded" : "accepted",
       answer,
     };
   });
@@ -92,15 +92,12 @@ export async function createServer() {
 
   app.get("/job/:id", async (request, reply) => {
     const params = jobIdParamsSchema.parse(request.params);
-    const job = getService().jobs.get(params.id);
-    if (!job) {
-      return reply.status(404).send({
-        ok: false,
-        code: BrokerErrorCode.INTERNAL_ERROR,
-        message: `Job not found: ${params.id}`,
-      });
+    const result = await getService().pollJob(params.id);
+    if ("ok" in result && result.ok === false) {
+      const status = result.code === BrokerErrorCode.VALIDATION_ERROR ? 404 : 400;
+      return reply.status(status).send(result);
     }
-    return { ok: true, job };
+    return result;
   });
 
   return app;
