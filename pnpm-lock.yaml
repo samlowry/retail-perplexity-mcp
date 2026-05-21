@@ -128,13 +128,13 @@ importers:
         version: link:../ui-state
       camoufox-js:
         specifier: 0.10.2
-        version: 0.10.2(playwright-core@1.60.0)
+        version: 0.10.2(playwright-core@1.59.0)
       impit-darwin-arm64:
         specifier: 0.13.1
         version: 0.13.1
       playwright-core:
-        specifier: 1.60.0
-        version: 1.60.0
+        specifier: 1.59.0
+        version: 1.59.0
     devDependencies:
       '@types/node':
         specifier: ^22.15.29
@@ -162,8 +162,8 @@ importers:
   packages/ui-selectors:
     dependencies:
       playwright:
-        specifier: 1.60.0
-        version: 1.60.0
+        specifier: 1.59.0
+        version: 1.59.0
     devDependencies:
       '@types/node':
         specifier: ^22.15.29
@@ -178,8 +178,8 @@ importers:
         specifier: workspace:*
         version: link:../ui-selectors
       playwright:
-        specifier: 1.60.0
-        version: 1.60.0
+        specifier: 1.59.0
+        version: 1.59.0
     devDependencies:
       '@types/node':
         specifier: ^22.15.29
@@ -1269,13 +1269,13 @@ packages:
     resolution: {integrity: sha512-wQ0b/W4Fr01qtpHlqSqspcj3EhBvimsdh0KlHhH8HRZnMsEa0ea2fTULOXOS9ccQr3om+GcGRk4e+isrZWV8qQ==}
     engines: {node: '>=16.20.0'}
 
-  playwright-core@1.60.0:
-    resolution: {integrity: sha512-9bW6zvX/m0lEbgTKJ6YppOKx8H3VOPBMOCFh2irXFOT4BbHgrx5hPjwJYLT40Lu+4qtD36qKc/Hn56StUW57IA==}
+  playwright-core@1.59.0:
+    resolution: {integrity: sha512-PW/X/IoZ6BMUUy8rpwHEZ8Kc0IiLIkgKYGNFaMs5KmQhcfLILNx9yCQD0rnWeWfz1PNeqcFP1BsihQhDOBCwZw==}
     engines: {node: '>=18'}
     hasBin: true
 
-  playwright@1.60.0:
-    resolution: {integrity: sha512-hheHdokM8cdqCb0lcE3s+zT4t4W+vvjpGxsZlDnikarzx8tSzMebh3UiFtgqwFwnTnjYQcsyMF8ei2mCO/tpeA==}
+  playwright@1.59.0:
+    resolution: {integrity: sha512-wihGScriusvATUxmhfENxg0tj1vHEFeIwxlnPFKQTOQVd7aG08mUfvvniRP/PtQOC+2Bs52kBOC/Up1jTXeIbw==}
     engines: {node: '>=18'}
     hasBin: true
 
@@ -2045,7 +2045,7 @@ snapshots:
 
   callsites@3.1.0: {}
 
-  camoufox-js@0.10.2(playwright-core@1.60.0):
+  camoufox-js@0.10.2(playwright-core@1.59.0):
     dependencies:
       adm-zip: 0.5.17
       better-sqlite3: 12.10.0
@@ -2056,7 +2056,7 @@ snapshots:
       impit: 0.13.1
       language-tags: 2.1.0
       maxmind: 5.0.6
-      playwright-core: 1.60.0
+      playwright-core: 1.59.0
       pretty-bytes: 7.1.0
       ua-parser-js: 2.0.9
       xml2js: 0.6.2
@@ -2628,11 +2628,11 @@ snapshots:
 
   pkce-challenge@5.0.1: {}
 
-  playwright-core@1.60.0: {}
+  playwright-core@1.59.0: {}
 
-  playwright@1.60.0:
+  playwright@1.59.0:
     dependencies:
-      playwright-core: 1.60.0
+      playwright-core: 1.59.0
     optionalDependencies:
       fsevents: 2.3.2
 

@@ -173,6 +173,7 @@ Install script records `$(which node)` in the plist. If you upgrade Node via nvm
 | `curl` connection refused | `launchctl print gui/$(id -u)/com.samlowry.perplexity-broker`, `broker.stderr.log` |
 | Wrong Perplexity account | Duplicate `data/profile` under `apps/broker/` — use absolute `PROFILE_DIR`, broker cwd = repo root |
 | MCP works but slow first call | Browser cold start; run `pnpm doctor` once after login |
+| Browser opens then vanishes; `runs` keeps increasing | Playwright 1.60.0 crash in `broker.stderr.log` — see [runbook: Browser closes](./runbook.md#browser-closes-right-after-ask-camoufox); pin 1.59.0, `pnpm build`, kickstart agent |
 | Service not after reboot | `launchctl print` — plist must be in `~/Library/LaunchAgents/` and not disabled |
 
 ## Related docs
