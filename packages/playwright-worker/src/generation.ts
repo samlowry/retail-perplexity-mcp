@@ -4,6 +4,7 @@ import { UiState, type UiStateType } from "@pdb/ui-state";
 import { BrokerErrorCode, type BrokerError } from "@pdb/types";
 import type { ResponseFormatType } from "@pdb/types";
 import { getLastAnswer } from "./extract.js";
+import { getLastAnswerBlock } from "@pdb/ui-selectors";
 import type { ChatAnswerResult } from "@pdb/types";
 
 export type GenerationPhase = "generating" | "finished";
@@ -89,6 +90,14 @@ export async function openThreadUrl(page: Page, threadUrl: string): Promise<void
   const current = page.url();
   if (current === threadUrl) return;
   await page.goto(threadUrl, { waitUntil: "domcontentloaded" });
+}
+
+/** Length of visible answer text on page (0 if no answer block yet). */
+export async function measureVisibleAnswerChars(page: Page): Promise<number> {
+  const block = await getLastAnswerBlock(page);
+  if (!block) return 0;
+  const text = (await block.locator.innerText().catch(() => "")).trim();
+  return text.length;
 }
 
 /** Non-blocking poll: detect generating vs finished from current page UI. */

@@ -21,10 +21,13 @@ export const chatSendBodySchema = z.object({
   sessionId: sessionIdSchema,
   text: z.string().min(1),
   newThread: z.boolean().optional(),
-  timeoutMs: z.number().int().positive().optional(),
-  wait: z.boolean().optional().default(true),
   responseFormat: responseFormatSchema.optional().default("markdown"),
-  idempotencyKey: z.string().optional(),
+});
+
+export const threadStatusBodySchema = z.object({
+  sessionId: sessionIdSchema,
+  threadUrl: z.string().url(),
+  responseFormat: responseFormatSchema.optional().default("markdown"),
 });
 
 export const chatCancelBodySchema = z.object({
@@ -37,6 +40,3 @@ export const attachmentUploadBodySchema = z.object({
   filePath: z.string().min(1),
 });
 
-export const jobIdParamsSchema = z.object({
-  id: z.string().min(1),
-});

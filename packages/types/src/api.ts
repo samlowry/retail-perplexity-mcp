@@ -1,6 +1,7 @@
 import type { BrokerError } from "./errors.js";
-import type { AgentGenerationStatusType, JobRecord, JobStatusType } from "./jobs.js";
-import type { ChatAnswerResult, ResponseFormatType } from "./chat.js";
+import type { JobRecord } from "./jobs.js";
+import type { ResponseFormatType } from "./chat.js";
+import type { ThreadStatusResponse } from "./thread-status.js";
 
 export interface SessionEnsureRequest {
   sessionId: string;
@@ -26,18 +27,12 @@ export interface ChatSendRequest {
   sessionId: string;
   text: string;
   newThread?: boolean;
-  timeoutMs?: number;
-  wait?: boolean;
   responseFormat?: ResponseFormatType;
-  idempotencyKey?: string;
 }
 
 export interface ChatSendResponse {
   ok: true;
-  jobId: string;
-  threadId?: string;
-  status: JobStatusType;
-  answer?: ChatAnswerResult;
+  threadUrl: string;
 }
 
 export interface ChatCancelRequest {
@@ -65,16 +60,7 @@ export interface JobGetResponse {
   job: JobRecord;
 }
 
-export interface JobPollResponse {
-  ok: true;
-  jobId: string;
-  status: AgentGenerationStatusType;
-  threadUrl?: string;
-  answer?: ChatAnswerResult;
-  error?: BrokerError;
-  brokerStatus: JobStatusType;
-  lastUiState?: string;
-}
+export type { ThreadStatusResponse };
 
 export interface HealthResponse {
   ok: true;

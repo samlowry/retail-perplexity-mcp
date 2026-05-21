@@ -3,7 +3,7 @@ name: perplexity-desktop-broker
 description: >-
   Mandatory research-before-reasoning workflow. Activate whenever you need to
   think, plan, decide, design, compare options, investigate, or implement
-  something non-trivial — before drawing conclusions, use MCP perplexity_ask
+  something non-trivial — before drawing conclusions, use MCP perplexity_submit + perplexity_status
   (not built-in web search/crawl). If project context is unclear, explore the
   codebase first, then Perplexity with full brief, then reason. If the user
   request is self-contained, Perplexity first with all incoming info, then
@@ -20,7 +20,7 @@ The user may refer to this research path without saying “Perplexity”:
 
 | Synonym | Treat as |
 |---------|----------|
-| Перп, Плекс, Плекси, Плексити, Перплексити | **Perplexity** → use `perplexity_ask` |
+| Перп, Плекс, Плекси, Плексити, Перплексити | **Perplexity** → use `perplexity_submit` / `perplexity_status` |
 
 ## Core rule
 
@@ -30,8 +30,8 @@ Perplexity’s web index is your **primary RAG** — richer than Cursor web sear
 **Order of work:**
 
 1. **Gather** (repo and/or user text — see workflow below)
-2. **`perplexity_ask`** with a **complete research brief**
-3. **Then** reason, plan, and act using Perplexity’s answer + your context
+2. **`perplexity_submit`** with a **complete research brief**, then **`perplexity_status`** until `completed`
+3. **Then** reason, plan, and act using the result + your context
 
 Built-in web search / crawl are **fallback only** (single URL, broker offline, user says skip).
 
@@ -66,7 +66,7 @@ Use when the task depends on **this codebase** and you do not yet have the pictu
 **Steps:**
 
 1. **Explore project** — search/read files, `BACKLOG.md`, architecture, related code; collect facts (paths, patterns, constraints).
-2. **`perplexity_ask`** — one structured question that includes:
+2. **`perplexity_submit`** — one structured question that includes:
    - **Verbatim user goal** and constraints
    - **What you found in the repo** (files, current behavior, gaps)
    - **What you need from the web** (best practices, API docs, comparisons)
@@ -82,26 +82,23 @@ Use when the user gave a **self-contained** question (no deep repo archaeology n
 
 **Steps:**
 
-1. **`perplexity_ask` immediately** — pack **all** incoming info into the question (task, constraints, options, what you already assume).
-2. **Then think** — reason and execute using the answer.
+1. **`perplexity_submit` then `perplexity_status`** — pack **all** incoming info into the question (task, constraints, options, what you already assume). Poll status until `completed` or `error`.
+2. **Then think** — reason and execute using the result.
 
-If mid-task you discover **project-specific** unknowns → switch to **workflow A** (quick repo scan → second `perplexity_ask` with `new_chat: true` if topic shifted).
+If mid-task you discover **project-specific** unknowns → switch to **workflow A** (quick repo scan → second submit with `new_chat: true` if topic shifted).
 
 ---
 
 ## How to call Perplexity MCP
 
-**Long research or concurrent tasks:** `perplexity_submit` → poll `perplexity_status` with `job_id` until `status: finished`. Do not hold one MCP call open for the whole generation.
-
-**Short blocking ask:** `perplexity_ask` (waits until answer; may hit Cursor MCP client timeout before broker timeout).
+**Research flow:** `perplexity_submit` → poll `perplexity_status` with `thread_url` until `status: completed` or `error`. Do not hold one MCP call open for the whole generation.
 
 | Parameter | Default | Notes |
 |-----------|---------|--------|
 | `question` | required | **Full brief**, not a one-liner — see template below |
 | `new_chat` | `false` | `true` for unrelated topic |
-| `timeout_seconds` | `900` (15 min) | Seconds; broker uses `× 1000` ms. Env `DEFAULT_TIMEOUT_MS` is ms |
 | `format` | `markdown` | |
-| `job_id` | — | `perplexity_status` only |
+| `thread_url` | — | `perplexity_status` only (from submit) |
 
 **Research brief template** (paste and fill):
 
@@ -150,10 +147,10 @@ Broker repo: `retail-perplexity-mcp` (this workspace).
 
 ## Maintainer reference (editing this broker only)
 
-Cursor → `perplexity_submit` / `perplexity_status` / `perplexity_ask` → broker `:3317` → Playwright → Camoufox → Perplexity UI.
+Cursor → `perplexity_submit` / `perplexity_status` → broker `:3317` → Playwright → Camoufox → Perplexity UI.
 
 Packages: `apps/broker`, `apps/mcp-server`, `packages/playwright-worker`, `packages/ui-selectors`, `packages/ui-state`, `packages/core`, `packages/types`.
 
-Agents: prefer **`perplexity_submit` + `perplexity_status`** for long waits; HTTP `GET /job/:id` polls UI for dev.
+Agents: **`perplexity_submit`** returns `thread_url`; **`perplexity_status`** reads UI (stateless, no job store). HTTP `POST /thread/status` for dev.
 
 Coding skills: `playwright-best-practices`, `mcp-builder`, `fastify-best-practices`, `nodejs-backend-patterns`.

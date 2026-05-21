@@ -10,35 +10,37 @@ import {
   formatTimingsMs,
   parseBrokerErrorBody,
   toAgentErrorCode,
-  type ChatSendSuccess,
-  type JobPollSuccess,
+  type ThreadStatusSuccess,
 } from "./broker-client.js";
 
 const SESSION_ID = "default";
 
-/** MCP tools return JSON in text content; ok discriminates success vs failure. */
-type AgentSuccess = {
+/** MCP tools return JSON in text content. */
+type AgentToolSuccess = {
   ok: true;
-  answer?: string;
-  job_id?: string;
-  status?: "generating" | "finished";
-  sources?: ChatSendSuccess["answer"]["sources"];
+  thread_url: string;
+  status: "running" | "completed" | "error";
+  result?: string;
+  error_message?: string;
+  visible_chars?: number;
+  sources?: NonNullable<ThreadStatusSuccess["answer"]>["sources"];
   timings_ms?: Record<string, number>;
-  thread_url?: string;
+  code?: string;
+  last_ui_state?: string;
 };
 
-type AgentFailure = {
+type AgentToolFailure = {
   ok: false;
   code: string;
   message: string;
-  job_id?: string;
+  thread_url?: string;
 };
 
-function agentJsonContent(payload: AgentSuccess | AgentFailure) {
+function agentJsonContent(payload: AgentToolSuccess | AgentToolFailure) {
   return { content: [{ type: "text" as const, text: JSON.stringify(payload) }] };
 }
 
-async function ensureBrokerHealthy(): Promise<AgentFailure | null> {
+async function ensureBrokerHealthy(): Promise<AgentToolFailure | null> {
   const healthy = await brokerHealth();
   if (!healthy) {
     return {
@@ -50,9 +52,9 @@ async function ensureBrokerHealthy(): Promise<AgentFailure | null> {
   return null;
 }
 
-function failureFromError(error: unknown, jobId?: string): AgentFailure {
+function failureFromError(error: unknown, threadUrl?: string): AgentToolFailure {
   if (error instanceof BrokerNetworkError) {
-    return { ok: false, code: "BROKER_OFFLINE", message: error.message, job_id: jobId };
+    return { ok: false, code: "BROKER_OFFLINE", message: error.message, thread_url: threadUrl };
   }
   if (error instanceof BrokerRequestError) {
     const brokerError = parseBrokerErrorBody(error.body);
@@ -65,56 +67,96 @@ function failureFromError(error: unknown, jobId?: string): AgentFailure {
       typeof (error.body as { message: unknown }).message === "string"
         ? (error.body as { message: string }).message
         : "Request failed");
-    return { ok: false, code, message, job_id: jobId };
+    return { ok: false, code, message, thread_url: threadUrl };
   }
   return {
     ok: false,
     code: "FAILED",
     message: error instanceof Error ? error.message : String(error),
-    job_id: jobId,
+    thread_url: threadUrl,
+  };
+}
+
+function statusPayloadFromBroker(
+  result: ThreadStatusSuccess,
+  format: "markdown" | "text",
+): AgentToolSuccess {
+  const base = {
+    ok: true as const,
+    thread_url: result.threadUrl,
+    visible_chars: result.visibleChars,
+    last_ui_state: result.lastUiState,
+  };
+
+  if (result.status === "running") {
+    return { ...base, status: "running" };
+  }
+
+  if (result.status === "error" && result.error) {
+    return {
+      ...base,
+      status: "error",
+      code: toAgentErrorCode(result.error.code),
+      error_message: result.error.message,
+    };
+  }
+
+  if (!result.answer) {
+    return {
+      ...base,
+      status: "error",
+      code: "FAILED",
+      error_message: "Completed without an answer payload",
+    };
+  }
+
+  return {
+    ...base,
+    status: "completed",
+    result: formatAnswer(result.answer, format),
+    sources: result.answer.sources?.length ? result.answer.sources : undefined,
+    timings_ms: formatTimingsMs(result.answer.timings),
+    visible_chars: result.answer.answerText.length,
   };
 }
 
 const questionSchema = z.string().min(1);
 const newChatSchema = z.boolean().optional().default(false);
 const formatSchema = z.enum(["markdown", "text"]).optional().default("markdown");
-const timeoutSecondsSchema = z.number().positive().optional().default(900);
+const threadUrlSchema = z.string().url();
 
 const server = new McpServer({
   name: "perplexity-desktop-broker",
-  version: "0.2.0",
+  version: "0.3.0",
 });
 
 server.tool(
   "perplexity_submit",
-  "Submit a Perplexity question without waiting for the answer. Returns job_id; poll with perplexity_status. Use for waits longer than ~60s or concurrent tasks.",
+  "Send a question to Perplexity. Returns thread_url when the prompt is submitted (use as task id for perplexity_status). Does not wait for the full answer.",
   {
     question: questionSchema,
     new_chat: newChatSchema,
-    timeout_seconds: timeoutSecondsSchema,
     format: formatSchema,
   },
-  async ({ question, new_chat, timeout_seconds, format }) => {
+  async ({ question, new_chat, format }) => {
     const offline = await ensureBrokerHealthy();
     if (offline) return agentJsonContent(offline);
 
     try {
-      const result = await brokerFetch<{ ok: true; jobId: string; status?: string }>("/chat/send", {
+      const result = await brokerFetch<{ ok: true; threadUrl: string }>("/chat/send", {
         method: "POST",
         body: JSON.stringify({
           sessionId: SESSION_ID,
           text: question,
           newThread: new_chat,
-          timeoutMs: timeout_seconds * 1000,
-          wait: false,
           responseFormat: format,
         }),
       });
 
       return agentJsonContent({
         ok: true,
-        job_id: result.jobId,
-        status: "generating",
+        thread_url: result.threadUrl,
+        status: "running",
       });
     } catch (error) {
       return agentJsonContent(failureFromError(error));
@@ -124,97 +166,28 @@ server.tool(
 
 server.tool(
   "perplexity_status",
-  "Poll a submitted job by job_id. Opens the Perplexity thread URL when needed. status is generating or finished; answer present when finished successfully.",
+  "Check a submitted task by thread_url. Opens the Perplexity thread if needed. status: running | completed | error; result and error_message when applicable; visible_chars for progress while running.",
   {
-    job_id: z.string().min(1),
+    thread_url: threadUrlSchema,
     format: formatSchema,
   },
-  async ({ job_id, format }) => {
+  async ({ thread_url, format }) => {
     const offline = await ensureBrokerHealthy();
     if (offline) return agentJsonContent(offline);
 
     try {
-      const result = await brokerFetch<JobPollSuccess>(`/job/${encodeURIComponent(job_id)}`);
-
-      if (result.status === "generating") {
-        return agentJsonContent({
-          ok: true,
-          job_id: result.jobId,
-          status: "generating",
-          thread_url: result.threadUrl,
-        });
-      }
-
-      if (result.error) {
-        return agentJsonContent({
-          ok: false,
-          code: toAgentErrorCode(result.error.code),
-          message: result.error.message,
-          job_id: result.jobId,
-        });
-      }
-
-      if (!result.answer) {
-        return agentJsonContent({
-          ok: false,
-          code: "FAILED",
-          message: "Job finished without an answer payload",
-          job_id: result.jobId,
-        });
-      }
-
-      return agentJsonContent({
-        ok: true,
-        job_id: result.jobId,
-        status: "finished",
-        answer: formatAnswer(result.answer, format),
-        sources: result.answer.sources?.length ? result.answer.sources : undefined,
-        timings_ms: formatTimingsMs(result.answer.timings),
-        thread_url: result.threadUrl,
-      });
-    } catch (error) {
-      return agentJsonContent(failureFromError(error, job_id));
-    }
-  },
-);
-
-server.tool(
-  "perplexity_ask",
-  "Ask Perplexity and wait for the full answer (blocks MCP until done). For long research or multiple concurrent tasks, use perplexity_submit + perplexity_status instead.",
-  {
-    question: questionSchema,
-    new_chat: newChatSchema,
-    timeout_seconds: timeoutSecondsSchema,
-    format: formatSchema,
-  },
-  async ({ question, new_chat, timeout_seconds, format }) => {
-    const offline = await ensureBrokerHealthy();
-    if (offline) return agentJsonContent(offline);
-
-    try {
-      const result = await brokerFetch<ChatSendSuccess>("/chat/send", {
+      const result = await brokerFetch<ThreadStatusSuccess>("/thread/status", {
         method: "POST",
         body: JSON.stringify({
           sessionId: SESSION_ID,
-          text: question,
-          newThread: new_chat,
-          timeoutMs: timeout_seconds * 1000,
-          wait: true,
+          threadUrl: thread_url,
           responseFormat: format,
         }),
       });
 
-      const success: AgentSuccess = {
-        ok: true,
-        answer: formatAnswer(result.answer, format),
-        sources: result.answer.sources?.length ? result.answer.sources : undefined,
-        timings_ms: formatTimingsMs(result.answer.timings),
-        job_id: result.jobId,
-        status: "finished",
-      };
-      return agentJsonContent(success);
+      return agentJsonContent(statusPayloadFromBroker(result, format));
     } catch (error) {
-      return agentJsonContent(failureFromError(error));
+      return agentJsonContent(failureFromError(error, thread_url));
     }
   },
 );

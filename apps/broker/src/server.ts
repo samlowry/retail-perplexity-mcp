@@ -6,7 +6,7 @@ import {
   sessionEnsureBodySchema,
   threadNewBodySchema,
   attachmentUploadBodySchema,
-  jobIdParamsSchema,
+  threadStatusBodySchema,
   BrokerErrorCode,
 } from "@pdb/types";
 import { loadConfig } from "@pdb/core";
@@ -59,17 +59,27 @@ export async function createServer() {
 
   app.post("/chat/send", async (request, reply) => {
     const body = chatSendBodySchema.parse(request.body);
-    const { jobId, answer, error } = await getService().sendChat(body);
-    if (error) {
+    const result = await getService().submitChat(body);
+    if ("error" in result) {
+      const error = result.error;
       const status = error.code === BrokerErrorCode.AUTH_REQUIRED ? 401 : 400;
-      return reply.status(status).send({ jobId, ...error });
+      return reply.status(status).send(error);
     }
-    return {
-      ok: true,
-      jobId,
-      status: answer ? "succeeded" : "accepted",
-      answer,
-    };
+    return { ok: true, threadUrl: result.threadUrl };
+  });
+
+  app.post("/thread/status", async (request, reply) => {
+    const body = threadStatusBodySchema.parse(request.body);
+    const result = await getService().getThreadStatus(
+      body.sessionId,
+      body.threadUrl,
+      body.responseFormat,
+    );
+    if ("ok" in result && result.ok === false) {
+      const status = result.code === BrokerErrorCode.AUTH_REQUIRED ? 401 : 400;
+      return reply.status(status).send(result);
+    }
+    return result;
   });
 
   app.post("/chat/cancel", async (request, reply) => {
@@ -88,16 +98,6 @@ export async function createServer() {
       return reply.status(400).send(result);
     }
     return { ok: true, uploaded: result.uploaded };
-  });
-
-  app.get("/job/:id", async (request, reply) => {
-    const params = jobIdParamsSchema.parse(request.params);
-    const result = await getService().pollJob(params.id);
-    if ("ok" in result && result.ok === false) {
-      const status = result.code === BrokerErrorCode.VALIDATION_ERROR ? 404 : 400;
-      return reply.status(status).send(result);
-    }
-    return result;
   });
 
   return app;

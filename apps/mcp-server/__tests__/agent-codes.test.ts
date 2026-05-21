@@ -7,10 +7,6 @@ describe("toAgentErrorCode", () => {
     expect(toAgentErrorCode(BrokerErrorCode.AUTH_REQUIRED)).toBe("NEEDS_LOGIN");
   });
 
-  it("maps GENERATION_TIMEOUT to TIMEOUT", () => {
-    expect(toAgentErrorCode(BrokerErrorCode.GENERATION_TIMEOUT)).toBe("TIMEOUT");
-  });
-
   it("maps CONFLICT to BUSY", () => {
     expect(toAgentErrorCode(BrokerErrorCode.CONFLICT)).toBe("BUSY");
   });

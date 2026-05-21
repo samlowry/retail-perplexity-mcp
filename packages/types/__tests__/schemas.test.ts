@@ -18,7 +18,6 @@ describe("chatSendBodySchema", () => {
       sessionId: "default",
       text: "hello",
     });
-    expect(parsed.wait).toBe(true);
     expect(parsed.responseFormat).toBe("markdown");
   });
 });

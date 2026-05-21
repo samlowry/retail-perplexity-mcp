@@ -32,83 +32,73 @@ After changes: **Reload Window** in Cursor so MCP/skills refresh.
 }
 ```
 
-3. Restart Cursor and verify MCP tools: `perplexity_submit`, `perplexity_status`, and `perplexity_ask`.
+3. Restart Cursor and verify MCP tools: `perplexity_submit`, `perplexity_status`.
 
-## Two-phase flow (recommended for long research)
+## Two-command flow
 
-1. **`perplexity_submit`** — send the question; returns `job_id` immediately (MCP does not wait for generation).
-2. **`perplexity_status`** — poll with `job_id` until `status` is `finished` (or handle errors). The broker opens the stored Perplexity thread URL when polling a different topic.
+1. **`perplexity_submit`** — sends the prompt; returns **`thread_url`** when submit finished (sync until Perplexity thread URL is known). MCP does not wait for the full answer.
+2. **`perplexity_status`** — pass the same **`thread_url`**; broker opens that thread if needed, reads UI, returns status and payload in one call.
 
-Use this for waits longer than ~60 seconds, multiple concurrent generations, or when Cursor’s own MCP client timeout is a concern.
-
-**`perplexity_ask`** still blocks until the answer is ready (same HTTP path with `wait: true`). Prefer submit + status for long jobs.
+Poll every few seconds until `status` is `completed` or `error`. No broker-side job list or timeout — the agent decides when to stop polling.
 
 ## MCP tools
 
 | Tool | Purpose |
 |------|---------|
-| `perplexity_submit` | Start generation; returns `job_id` |
-| `perplexity_status` | Poll by `job_id`; `generating` or `finished` |
-| `perplexity_ask` | Blocking ask (legacy/convenience) |
+| `perplexity_submit` | Submit question; returns `thread_url` (task id) |
+| `perplexity_status` | Status + result/error/visible_chars by `thread_url` |
 
 Session bootstrap runs inside the broker; `session_id` is always `default` and is not exposed on MCP.
 
-### `perplexity_submit` / `perplexity_ask` parameters
+### `perplexity_submit` parameters
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `question` | string | (required) | Prompt text |
 | `new_chat` | boolean | `false` | Start a new Perplexity thread before sending |
-| `timeout_seconds` | number | `900` (15 min) | Max time allowed for generation (see timeouts below) |
-| `format` | `markdown` \| `text` | `markdown` | Answer format |
+| `format` | `markdown` \| `text` | `markdown` | Answer format when completed |
 
 ### `perplexity_status` parameters
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `job_id` | string | (required) | Id from `perplexity_submit` (e.g. `job_a1b2c3d4e5f6`) |
-| `format` | `markdown` \| `text` | `markdown` | Answer format when finished |
+| `thread_url` | string | (required) | URL from `perplexity_submit` |
+| `format` | `markdown` \| `text` | `markdown` | Answer format when completed |
 
-### Success / failure JSON (text content)
+### Response JSON (text content)
 
 Submit success:
 
 ```json
-{ "ok": true, "job_id": "job_…", "status": "generating" }
+{ "ok": true, "thread_url": "https://www.perplexity.ai/search/…", "status": "running" }
 ```
 
 Status while running:
 
 ```json
-{ "ok": true, "job_id": "job_…", "status": "generating", "thread_url": "https://…" }
+{ "ok": true, "thread_url": "https://…", "status": "running", "visible_chars": 1204 }
 ```
 
-Status when done:
+Status when completed:
 
 ```json
-{ "ok": true, "job_id": "job_…", "status": "finished", "answer": "…", "timings_ms": { … } }
+{ "ok": true, "thread_url": "https://…", "status": "completed", "result": "…", "timings_ms": { … } }
 ```
 
-Failure:
+Status when Perplexity/UI error:
 
 ```json
-{ "ok": false, "code": "…", "message": "…", "job_id": "job_…" }
+{ "ok": true, "thread_url": "https://…", "status": "error", "code": "NEEDS_LOGIN", "error_message": "…" }
 ```
 
-Agent-facing error codes: `NEEDS_LOGIN`, `BROKER_OFFLINE`, `BUSY`, `TIMEOUT`, `RATE_LIMITED`, `UI_CHANGED`, `FAILED`.
+Broker unreachable (tool failure):
 
-## Timeouts (important)
+```json
+{ "ok": false, "code": "BROKER_OFFLINE", "message": "…" }
+```
 
-| Setting | Unit | Default | Meaning |
-|---------|------|---------|---------|
-| MCP `timeout_seconds` | **seconds** | `900` | Max generation time for that job; broker marks `TIMED_OUT` after this many ms from job creation |
-| `DEFAULT_TIMEOUT_MS` (`.env`) | **milliseconds** | `900000` | Broker default when `timeoutMs` omitted on HTTP (`900` s = 15 min) |
-| `config/default.json` `defaultTimeoutMs` | **milliseconds** | `900000` | Same as env default for local config |
+Agent-facing error codes: `NEEDS_LOGIN`, `BROKER_OFFLINE`, `BUSY`, `RATE_LIMITED`, `UI_CHANGED`, `FAILED`.
 
-There is **no** `PERPLEXITY_*` timeout env var — only `DEFAULT_TIMEOUT_MS`. Values are always ms in env/config and seconds in MCP.
+`visible_chars` is the length of answer text visible on the page — compare across polls to see progress.
 
-**Not the same as Cursor’s MCP timeout:** Cursor may abort a tool call independently (often much sooner than 15 minutes). That is why `perplexity_submit` + `perplexity_status` avoid holding one MCP call open for the whole generation.
-
-Previously defaults were `600` seconds / `600000` ms (10 minutes); they are now 15 minutes unless you override.
-
-HTTP routes (`/health`, `/chat/send`, `GET /job/:id`, etc.) remain on the broker for doctor and development.
+HTTP routes: `/health`, `/chat/send`, `/thread/status`, etc. on the broker for doctor and development.

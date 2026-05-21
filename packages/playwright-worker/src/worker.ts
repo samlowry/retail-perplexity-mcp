@@ -8,7 +8,13 @@ import {
 import { BrowserSessionManager } from "./session.js";
 import { newThread } from "./thread.js";
 import { cancelGeneration, sendPrompt, waitForCompletion } from "./chat.js";
-import { extractAnswerResult, openThreadUrl, pollGenerationPhase } from "./generation.js";
+import {
+  extractAnswerResult,
+  measureVisibleAnswerChars,
+  openThreadUrl,
+  pollGenerationPhase,
+} from "./generation.js";
+import { ThreadTaskStatus, type ThreadTaskStatusType } from "@pdb/types";
 import { getLastAnswer } from "./extract.js";
 import { waitForUiState } from "@pdb/ui-state";
 import { UiState } from "@pdb/ui-state";
@@ -109,6 +115,74 @@ export class PlaywrightWorker {
       phase: poll.phase,
       uiState: poll.uiState,
       error: poll.error,
+    };
+  }
+
+  /**
+   * Open thread URL, read UI, return running/completed/error and optional answer or visible char count.
+   */
+  async getThreadStatus(
+    threadUrl: string,
+    responseFormat: ResponseFormatType,
+  ): Promise<
+    | {
+        status: ThreadTaskStatusType;
+        visibleChars?: number;
+        answer?: ChatAnswerResult;
+        error?: BrokerError;
+        lastUiState?: string;
+      }
+    | BrokerError
+  > {
+    const page = this.session.getPage();
+    if (!page) {
+      return {
+        ok: false,
+        code: BrokerErrorCode.SESSION_BROKEN,
+        message: "No browser page",
+      };
+    }
+
+    await openThreadUrl(page, threadUrl);
+    const poll = await pollGenerationPhase(page);
+    const visibleChars = await measureVisibleAnswerChars(page);
+
+    if (poll.error) {
+      return {
+        status: ThreadTaskStatus.ERROR,
+        visibleChars,
+        error: poll.error,
+        lastUiState: poll.uiState,
+      };
+    }
+
+    if (poll.phase === "generating") {
+      return {
+        status: ThreadTaskStatus.RUNNING,
+        visibleChars,
+        lastUiState: poll.uiState,
+      };
+    }
+
+    const extracted = await extractAnswerResult(page, responseFormat, {
+      sendMs: 0,
+      generationMs: 0,
+    });
+    if ("ok" in extracted && extracted.ok === false) {
+      return {
+        status: ThreadTaskStatus.ERROR,
+        visibleChars,
+        error: extracted,
+        lastUiState: poll.uiState,
+      };
+    }
+
+    const completed = extracted as ChatAnswerResult;
+    return {
+      status: ThreadTaskStatus.COMPLETED,
+      visibleChars: completed.answerText.length,
+      answer: completed,
+      lastUiState: poll.uiState,
     };
   }
 

@@ -1,5 +1,5 @@
 import { BrokerErrorCode, isBrokerError, type BrokerError } from "@pdb/types";
-import type { ChatAnswerResult, HealthResponse } from "@pdb/types";
+import type { ChatAnswerResult, HealthResponse, ThreadTaskStatusType } from "@pdb/types";
 
 const BROKER_BASE = `http://${process.env.BROKER_HOST ?? "127.0.0.1"}:${process.env.BROKER_PORT ?? "3317"}`;
 
@@ -23,21 +23,18 @@ export class BrokerRequestError extends Error {
   }
 }
 
-export interface ChatSendSuccess {
+export interface ChatSubmitSuccess {
   ok: true;
-  jobId: string;
-  status: string;
-  answer: ChatAnswerResult;
+  threadUrl: string;
 }
 
-export interface JobPollSuccess {
+export interface ThreadStatusSuccess {
   ok: true;
-  jobId: string;
-  status: "generating" | "finished";
-  threadUrl?: string;
+  threadUrl: string;
+  status: ThreadTaskStatusType;
+  visibleChars?: number;
   answer?: ChatAnswerResult;
   error?: BrokerError;
-  brokerStatus: string;
   lastUiState?: string;
 }
 
@@ -99,7 +96,6 @@ export type AgentErrorCode =
   | "NEEDS_LOGIN"
   | "BROKER_OFFLINE"
   | "BUSY"
-  | "TIMEOUT"
   | "RATE_LIMITED"
   | "UI_CHANGED"
   | "FAILED";
@@ -109,8 +105,6 @@ export function toAgentErrorCode(brokerCode: string | undefined): AgentErrorCode
   switch (brokerCode) {
     case BrokerErrorCode.AUTH_REQUIRED:
       return "NEEDS_LOGIN";
-    case BrokerErrorCode.GENERATION_TIMEOUT:
-      return "TIMEOUT";
     case BrokerErrorCode.CONFLICT:
       return "BUSY";
     case BrokerErrorCode.RATE_LIMITED:
