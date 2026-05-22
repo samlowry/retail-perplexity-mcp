@@ -93,18 +93,34 @@ function normalizeThreadUrl(url: string): string {
   return url.split("#")[0].replace(/\/$/, "");
 }
 
+export type OpenThreadUrlOptions = {
+  /**
+   * Reload when the tab is already on this thread. Default false for status polls so
+   * an in-flight follow-up (stop/streaming on live DOM) is not replaced by the last saved answer.
+   */
+  reloadIfActive?: boolean;
+};
+
 /**
- * Open the chat-of-interest before every UI status read.
- * Always navigates or reloads — even when that URL is already active — so a frozen Perplexity SPA refreshes.
+ * Open the chat-of-interest before a UI status read.
+ * Navigates when on another URL; reloads only when reloadIfActive is true (e.g. frozen SPA retry).
  */
-export async function openThreadUrl(page: Page, threadUrl: string): Promise<void> {
+export async function openThreadUrl(
+  page: Page,
+  threadUrl: string,
+  options: OpenThreadUrlOptions = {},
+): Promise<void> {
+  const reloadIfActive = options.reloadIfActive ?? false;
   const current = normalizeThreadUrl(page.url());
   const target = normalizeThreadUrl(threadUrl);
   if (current === target) {
-    await page.reload({ waitUntil: "domcontentloaded" });
-  } else {
-    await page.goto(threadUrl, { waitUntil: "domcontentloaded" });
+    if (reloadIfActive) {
+      await page.reload({ waitUntil: "domcontentloaded" });
+      await page.waitForLoadState("load").catch(() => undefined);
+    }
+    return;
   }
+  await page.goto(threadUrl, { waitUntil: "domcontentloaded" });
   await page.waitForLoadState("load").catch(() => undefined);
 }
 

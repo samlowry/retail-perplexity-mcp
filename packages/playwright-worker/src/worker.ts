@@ -17,7 +17,7 @@ import {
 } from "./generation.js";
 import { ThreadTaskStatus, type ThreadTaskStatusType } from "@pdb/types";
 import { getLastAnswer } from "./extract.js";
-import { waitForUiState } from "@pdb/ui-state";
+import { isGenerationActive, waitForUiState } from "@pdb/ui-state";
 import { UiState } from "@pdb/ui-state";
 import { uploadFile } from "./attachment.js";
 import type { WorkerConfig } from "./types.js";
@@ -75,7 +75,7 @@ export class PlaywrightWorker {
             message: "No browser page",
           };
         }
-        await openThreadUrl(page, options.threadUrl);
+        await openThreadUrl(page, options.threadUrl, { reloadIfActive: false });
         const auth = await checkAuthState(page);
         if (!auth.loggedIn) {
           return {
@@ -160,7 +160,7 @@ export class PlaywrightWorker {
     }
 
     if (threadUrl) {
-      await openThreadUrl(page, threadUrl);
+      await openThreadUrl(page, threadUrl, { reloadIfActive: false });
     }
 
     const poll = await pollGenerationPhase(page);
@@ -196,8 +196,15 @@ export class PlaywrightWorker {
       };
     }
 
-    await openThreadUrl(page, threadUrl);
-    const poll = await pollGenerationPhase(page);
+    await openThreadUrl(page, threadUrl, { reloadIfActive: false });
+    let poll = await pollGenerationPhase(page);
+    if (poll.uiState === UiState.UNKNOWN) {
+      await openThreadUrl(page, threadUrl, { reloadIfActive: true });
+      poll = await pollGenerationPhase(page);
+    }
+
+    const generating =
+      poll.phase === "generating" || (await isGenerationActive(page));
     const visibleChars = await measureVisibleAnswerChars(page);
 
     if (poll.error) {
@@ -209,11 +216,11 @@ export class PlaywrightWorker {
       };
     }
 
-    if (poll.phase === "generating") {
+    if (generating) {
       return {
         status: ThreadTaskStatus.RUNNING,
         visibleChars,
-        lastUiState: poll.uiState,
+        lastUiState: poll.phase === "generating" ? poll.uiState : UiState.GENERATING,
       };
     }
 

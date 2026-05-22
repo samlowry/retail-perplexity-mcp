@@ -2,6 +2,8 @@ import type { Page } from "playwright";
 import {
   answerStrategies,
   checkAuthState,
+  getLastAnswerBlock,
+  getStopButton,
   isAnyStrategyVisible,
   promptInputStrategies,
   resolveVisibleLocator,
@@ -12,6 +14,50 @@ let lastKnownState: UiStateType = UiState.UNKNOWN;
 
 export function getLastKnownUiState(): UiStateType {
   return lastKnownState;
+}
+
+const GENERATION_PLACEHOLDER = /^(thinking|searching|writing|reading sources|working)/i;
+
+/**
+ * True when Perplexity is producing a new answer (including follow-ups in a multi-turn thread).
+ */
+export async function isGenerationActive(page: Page): Promise<boolean> {
+  const stop = await getStopButton(page);
+  if (stop) {
+    return true;
+  }
+
+  const stopByLabel = await page
+    .locator('button[aria-label*="stop" i]')
+    .first()
+    .isVisible()
+    .catch(() => false);
+  if (stopByLabel) {
+    return true;
+  }
+
+  const lastBlock = await getLastAnswerBlock(page);
+  if (lastBlock) {
+    const streamingInAnswer = await lastBlock.locator
+      .locator('[class*="streaming"], [data-streaming="true"], [aria-busy="true"]')
+      .first()
+      .isVisible()
+      .catch(() => false);
+    if (streamingInAnswer) {
+      return true;
+    }
+    const answerText = (await lastBlock.locator.innerText().catch(() => "")).trim();
+    if (GENERATION_PLACEHOLDER.test(answerText)) {
+      return true;
+    }
+  }
+
+  const streamingAnywhere = await page
+    .locator('[class*="streaming"], [data-streaming="true"]')
+    .first()
+    .isVisible()
+    .catch(() => false);
+  return streamingAnywhere;
 }
 
 /**
@@ -45,17 +91,12 @@ export async function detectUiState(page: Page): Promise<UiDetectionResult> {
     return { state: UiState.FILE_UPLOADING };
   }
 
-  const stopVisible = await page
-    .getByRole("button", { name: /stop/i })
-    .first()
-    .isVisible()
-    .catch(() => false);
-  if (stopVisible) {
+  if (await isGenerationActive(page)) {
     lastKnownState = UiState.GENERATING;
     return { state: UiState.GENERATING };
   }
 
-  // After stop is gone: avoid matching "rate limiting" inside long answers while streaming.
+  // After generation signals are gone: avoid matching "rate limiting" inside long answers while streaming.
   if (/rate limit exceeded|too many requests/i.test(bodyText)) {
     lastKnownState = UiState.RATE_LIMITED;
     return { state: UiState.RATE_LIMITED };
@@ -72,15 +113,6 @@ export async function detectUiState(page: Page): Promise<UiDetectionResult> {
   const promptVisible = await isAnyStrategyVisible(page, promptInputStrategies);
 
   if (answerVisible && promptVisible) {
-    const streaming = await page
-      .locator('[class*="streaming"], [data-streaming="true"]')
-      .first()
-      .isVisible()
-      .catch(() => false);
-    if (streaming) {
-      lastKnownState = UiState.STREAMING_PARTIAL;
-      return { state: UiState.STREAMING_PARTIAL };
-    }
     lastKnownState = UiState.COMPLETE;
     return { state: UiState.COMPLETE };
   }

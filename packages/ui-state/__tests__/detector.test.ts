@@ -75,4 +75,11 @@ describe("detectUiState on HTML fixtures", () => {
     await page.close();
     expect(result.state).toBe(UiState.GENERATING);
   });
+
+  it("detects generating on follow-up thread with prior answer still visible", async () => {
+    const page = await loadFixture("generating-followup-thread.html");
+    const result = await detectUiState(page);
+    await page.close();
+    expect(result.state).toBe(UiState.GENERATING);
+  });
 });
