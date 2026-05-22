@@ -37,6 +37,33 @@ async function fillPromptInput(page: Page, locator: Locator, text: string): Prom
   }
 }
 
+/**
+ * Submit the prompt without targeting the Submit button hit box.
+ * Perplexity's fixed "Set up Computer" promo (bottom-right) is not closable but
+ * Playwright's actionability check treats it as intercepting pointer events on Submit.
+ */
+async function submitPrompt(
+  page: Page,
+  inputLocator: Locator,
+  submit: Awaited<ReturnType<typeof getSubmitButton>>,
+): Promise<void> {
+  await inputLocator.focus();
+  await inputLocator.press("Enter");
+
+  const started = await waitForUiState(
+    page,
+    [UiState.GENERATING, UiState.COMPLETE, UiState.READY],
+    4_000,
+  );
+  if (started.ok) {
+    return;
+  }
+
+  if (submit) {
+    await submit.locator.click({ force: true, timeout: 5_000 });
+  }
+}
+
 export async function sendPrompt(page: Page, text: string): Promise<void> {
   const input = await getPromptInput(page);
   if (!input) {
@@ -49,11 +76,7 @@ export async function sendPrompt(page: Page, text: string): Promise<void> {
 
   await fillPromptInput(page, input.locator, text);
   const submit = await getSubmitButton(page);
-  if (submit) {
-    await submit.locator.click();
-  } else {
-    await input.locator.press("Enter");
-  }
+  await submitPrompt(page, input.locator, submit);
 }
 
 export async function waitForCompletion(
