@@ -61,7 +61,7 @@ Session bootstrap runs inside the broker; `session_id` is always `default` and i
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `question` | string | (required) | Prompt (MCP appends in-chat-only instruction after `----`) |
+| `question` | string | (required) | Prompt (broker appends in-chat-only instruction block on send) |
 | `chat_id` | string | — | Thread URL or slug; **omit for new topic** |
 | `format` | `markdown` \| `text` | `markdown` | Answer format when completed |
 

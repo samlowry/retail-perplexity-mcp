@@ -1,12 +1,3 @@
 {
-  "mcpServers": {
-    "perplexity-broker": {
-      "command": "node",
-      "args": ["/Users/samlowry/Documents/retail-perplexity-mcp/apps/mcp-server/dist/index.js"],
-      "env": {
-        "BROKER_HOST": "127.0.0.1",
-        "BROKER_PORT": "3317"
-      }
-    }
-  }
+  "mcpServers": {}
 }

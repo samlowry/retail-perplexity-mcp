@@ -140,11 +140,11 @@ Research needed:
 Output: [bullet summary / comparison table / step-by-step / citations]
 ```
 
-**Verify MCP build:** call `perplexity_broker_info` → must show `mcp_version` **0.4.3+** and `prompt_suffix_on_submit: true` after Reload Window.
+**Verify MCP build:** call `perplexity_broker_info` → must show `mcp_version` **0.4.4+** and `prompt_suffix_on_submit: true` after Reload Window.
 
-**Submit success:** `{ "ok": true, "mcp_version": "0.4.3", "chat_id": "https://…", "status": "running", "prompt_suffix_applied": true }`
+**Submit success:** `{ "ok": true, "mcp_version": "0.4.4", "chat_id": "https://…", "status": "running", "prompt_suffix_applied": true }`
 
-The suffix is appended **inside MCP** (not visible in the `question` arg in Cursor UI). In Perplexity the user message must end with `----` and the in-chat-only instruction.
+The suffix is appended in the **broker** on every `/chat/send` (MCP and HTTP). It is not visible in the Cursor `question` arg. In Perplexity the user bubble must include `[Instruction — reply in this chat only]` and the no-files line — **do not** use `----` as a separator (Perplexity hides the tail).
 
 **Status while running:** `{ "ok": true, "chat_id": "…", "status": "running", "visible_chars": 1204 }`
 

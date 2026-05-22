@@ -34,6 +34,8 @@ export interface ChatSendRequest {
 export interface ChatSendResponse {
   ok: true;
   chatId: string;
+  /** True when the in-chat-only instruction block was appended on this submit. */
+  promptSuffixApplied?: boolean;
 }
 
 export interface ChatCancelRequest {

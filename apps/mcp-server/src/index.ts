@@ -13,7 +13,7 @@ import {
   type ChatSubmitSuccess,
   type ThreadStatusSuccess,
 } from "./broker-client.js";
-import { CHAT_OUTPUT_INSTRUCTION_SEPARATOR, prepareSubmitPrompt } from "./prompt-suffix.js";
+import { CHAT_OUTPUT_INSTRUCTION_SEPARATOR } from "@pdb/types";
 import { MCP_VERSION } from "./version.js";
 
 const SESSION_ID = "default";
@@ -158,6 +158,7 @@ server.tool(
             ok: true,
             mcp_version: MCP_VERSION,
             prompt_suffix_on_submit: true,
+            prompt_suffix_applied_by: "broker",
             suffix_separator: CHAT_OUTPUT_INSTRUCTION_SEPARATOR,
             tools: ["perplexity_submit_question", "perplexity_get_answer", "perplexity_broker_info"],
           }),
@@ -180,16 +181,15 @@ server.tool(
     if (offline) return agentJsonContent(offline);
 
     try {
-      const prepared = prepareSubmitPrompt(question);
       console.error(
-        `[perplexity-broker mcp ${MCP_VERSION}] submit chars=${prepared.text.length} suffix_applied=${prepared.suffixApplied}`,
+        `[perplexity-broker mcp ${MCP_VERSION}] submit question_chars=${question.length}`,
       );
 
       const result = await brokerFetch<ChatSubmitSuccess>("/chat/send", {
         method: "POST",
         body: JSON.stringify({
           sessionId: SESSION_ID,
-          text: prepared.text,
+          text: question,
           chatId: chat_id,
           responseFormat: format,
         }),
@@ -200,7 +200,7 @@ server.tool(
         mcp_version: MCP_VERSION,
         chat_id: result.chatId,
         status: "running",
-        prompt_suffix_applied: prepared.suffixApplied,
+        prompt_suffix_applied: result.promptSuffixApplied ?? false,
       });
     } catch (error) {
       return agentJsonContent(failureFromError(error, chat_id));

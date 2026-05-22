@@ -1,8 +1,42 @@
-import type { Page } from "playwright-core";
+import type { Locator, Page } from "playwright-core";
 import { getPromptInput, getStopButton, getSubmitButton } from "@pdb/ui-selectors";
 import { UiState, waitForUiState } from "@pdb/ui-state";
 import { BrokerErrorCode } from "@pdb/types";
 import { captureArtifacts } from "./artifacts.js";
+
+/**
+ * Set Lexical prompt text and verify the editor retained head/tail (fill() alone often drops blocks after HR-like lines).
+ */
+async function fillPromptInput(page: Page, locator: Locator, text: string): Promise<void> {
+  const headMarker = text.slice(0, Math.min(48, text.length));
+  const tailMarker = text.slice(-Math.min(48, text.length));
+
+  const readInnerText = async (): Promise<string> =>
+    locator.evaluate((el) => (el as { innerText?: string }).innerText ?? "");
+
+  await locator.click();
+  await locator.fill(text);
+  let synced = await readInnerText();
+  const missingTail = tailMarker.length > 8 && !synced.includes(tailMarker);
+  if (!synced.includes(headMarker) || missingTail) {
+    const mod = process.platform === "darwin" ? "Meta" : "Control";
+    await locator.click();
+    await page.keyboard.press(`${mod}+KeyA`);
+    await page.keyboard.press("Backspace");
+    await page.keyboard.insertText(text);
+    synced = await readInnerText();
+  }
+
+  const stillMissingTail = tailMarker.length > 8 && !synced.includes(tailMarker);
+  if (!synced.includes(headMarker) || stillMissingTail) {
+    throw {
+      ok: false,
+      code: BrokerErrorCode.PROMPT_SEND_FAILED,
+      message: `Prompt input did not accept full text (editor ${synced.length} chars, expected ${text.length})`,
+    };
+  }
+}
+
 export async function sendPrompt(page: Page, text: string): Promise<void> {
   const input = await getPromptInput(page);
   if (!input) {
@@ -13,7 +47,7 @@ export async function sendPrompt(page: Page, text: string): Promise<void> {
     };
   }
 
-  await input.locator.fill(text);
+  await fillPromptInput(page, input.locator, text);
   const submit = await getSubmitButton(page);
   if (submit) {
     await submit.locator.click();

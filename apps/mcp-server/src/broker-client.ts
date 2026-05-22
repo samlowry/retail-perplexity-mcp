@@ -26,6 +26,7 @@ export class BrokerRequestError extends Error {
 export interface ChatSubmitSuccess {
   ok: true;
   chatId: string;
+  promptSuffixApplied?: boolean;
 }
 
 export interface ThreadStatusSuccess {
