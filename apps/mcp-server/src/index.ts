@@ -26,6 +26,8 @@ type AgentToolSuccess = {
   status: "running" | "completed" | "error";
   /** True when in-chat-only suffix was appended on submit (check mcp_version). */
   prompt_suffix_applied?: boolean;
+  /** Required follow-up when status is running after submit. */
+  next_step?: string;
   result?: string;
   error_message?: string;
   visible_chars?: number;
@@ -170,7 +172,7 @@ server.tool(
 
 server.tool(
   "perplexity_submit_question",
-  "Send a question to Perplexity. Optional chat_id (thread URL or search slug from a prior submit) continues that chat; omit chat_id for a new topic. Returns chat_id when the prompt is submitted; poll with perplexity_get_answer.",
+  "Queue a question in Perplexity only — this tool does NOT return an answer. Put multiple numbered tasks in one question when the agent needs several research outputs (one poll, one result). Optional chat_id continues that chat; omit for a new topic. Returns chat_id and status running. Answers are INVALID until perplexity_get_answer returns status completed (or error). You MUST call perplexity_get_answer with this chat_id: first poll ~30s after submit, then every 60s up to 16 minutes. Do not parallel-submit on one session (BUSY). Do not edit publishable facts while running.",
   {
     question: questionSchema,
     chat_id: chatIdSchema,
@@ -201,6 +203,8 @@ server.tool(
         chat_id: result.chatId,
         status: "running",
         prompt_suffix_applied: result.promptSuffixApplied ?? false,
+        next_step:
+          "Call perplexity_get_answer with this chat_id. Wait ~30s before the first poll, then every 60s until status is completed or error (up to 16 min). Do not use submit output as research; result appears only after completed.",
       });
     } catch (error) {
       return agentJsonContent(failureFromError(error, chat_id));
@@ -210,7 +214,7 @@ server.tool(
 
 server.tool(
   "perplexity_get_answer",
-  "Check a submitted task by chat_id (from perplexity_submit_question). Opens the Perplexity thread if needed. status: running | completed | error; result when completed; visible_chars while running.",
+  "Poll a queued question by chat_id (from perplexity_submit_question). Opens/reloads the Perplexity thread. status running means no verified result yet — keep polling (~30s first check, then every 60s, up to 16 min). Complex multi-task briefs may run 10-15 min with visible_chars 0 or flat while Perplexity reasons; that is normal — keep polling. Only status completed includes trustworthy result; error ends the poll. Pack several numbered tasks into one submit question when possible; do not parallel-submit on one session.",
   {
     chat_id: chatIdRequiredSchema,
     format: formatSchema,

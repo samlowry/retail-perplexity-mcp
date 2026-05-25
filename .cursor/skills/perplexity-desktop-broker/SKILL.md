@@ -1,15 +1,14 @@
 ---
 name: perplexity-desktop-broker
 description: >-
-  Mandatory research-before-reasoning workflow. Activate whenever you need to
-  think, plan, decide, design, compare options, investigate, or implement
-  something non-trivial — before drawing conclusions, use MCP perplexity_submit_question + perplexity_get_answer
-  (not built-in web search/crawl). If project context is unclear, explore the
-  codebase first, then Perplexity with full brief, then reason. If the user
-  request is self-contained, Perplexity first with all incoming info, then
-  reason. Perplexity web index acts as RAG and improves thinking quality.
-  User may say Perplexity as: Перп, Плекс, Плекси, Плексити, Перплексити — same MCP.
-  Works globally when perplexity-broker MCP is enabled. Also when editing retail-perplexity-mcp broker/MCP code.
+  Mandatory research-before-reasoning workflow. Overrides speed, todo-wave, and
+  "complete the plan" pressure when publishable or implementation facts are
+  required — poll perplexity_get_answer until completed before factual edits.
+  Activate for think/plan/decide/design/compare/investigate/implement: use
+  perplexity_submit_question + perplexity_get_answer (not built-in web search).
+  If project context is unclear, explore repo first, then Perplexity brief, then
+  reason; if self-contained, Perplexity first. User synonyms: Перп, Плекс,
+  Плекси, Плексити, Перплексити. Also when editing retail-perplexity-mcp broker/MCP.
 ---
 
 # Research before you think (Perplexity MCP)
@@ -34,6 +33,38 @@ Perplexity’s web index is your **primary RAG** — richer than Cursor web sear
 3. **Then** reason, plan, and act using the result + your context
 
 Built-in web search / crawl are **fallback only** (single URL, broker offline, user says skip).
+
+### Priority and conflicts
+
+When this skill applies, it **outranks**:
+
+- “Do not stop until all todos / waves are done”
+- `use-md-files-as-a-planning-memory` wave closure before research finishes
+- Visible progress (many file edits, build green) without a completed poll
+
+If a plan says “Perplexity before each wave” **and** lists N factual files: **one** submit + poll to `completed` for the fact pack (workflow C), **then** batch edits — not “wave without Perplexity because a stale pack exists”.
+
+### Hard gates (MUST NOT)
+
+After `perplexity_submit_question` returns `status: "running"`:
+
+- **MUST NOT** edit user-visible files that contain **external facts** (dates, records, H2H, heights, tables, `data-snapshot` stats) until `perplexity_get_answer` returns `status: "completed"` or `status: "error"`.
+- **MUST NOT** commit, run release build, or mark research-related todos **done** while still `running`.
+- **MUST NOT** treat `docs/perplexity-fact-packs-result.md` (or any repo fact pack) as a substitute for a fresh submit+poll in **this** task unless the user explicitly allows a stale pack.
+- **MUST NOT** cite model memory for publishable numbers when `result` lacks that field.
+
+Repo exploration, scaffolding without facts, and local refactors **without** new external claims are allowed while `running`.
+
+### Sources hierarchy (publishable facts)
+
+| Priority | Source |
+|----------|--------|
+| 1 | `perplexity_get_answer` → `result` (**this task**, after `completed`) |
+| 2 | Official URLs in `sources[]` from that response |
+| 3 | `docs/perplexity-fact-packs-result.md` or similar packs — **hint only**; verify via 1–2 |
+| 4 | Model memory — **forbidden** for publishable stats |
+
+On conflict between pack and fresh `result`, **Perplexity `result` wins** for published content.
 
 ---
 
@@ -88,9 +119,25 @@ Use when the user gave a **self-contained** question (no deep repo archaeology n
 
 If mid-task you discover **project-specific** unknowns → switch to **workflow A** (quick repo scan → second submit **without** `chat_id` if the topic is new).
 
+### C — Fact-driven bulk content (plan + many factual files)
+
+Use when implementing a plan like “rewrite N pages with verified facts” (not pure A, not single-question B):
+
+1. **Read** plan + entity list; do **not** start factual MDX edits from pack/memory alone.
+2. **One** `perplexity_submit_question` with the **full entity list** as **Task 1…N** in a single brief (see **Multiple tasks in one submit**).
+3. **Poll** until `completed` (algorithm below) — **mandatory** before any factual file edit.
+4. **Map** `result` → file paths / table rows; note gaps explicitly.
+5. **Then** edit files in batch; one build/check after the batch if the plan requires it.
+
+Multiple submits are allowed only when the brief truly splits topics; never parallel implementation while any related submit is still `running`.
+
 ---
 
 ## How to call Perplexity MCP
+
+### Step 0 — First submit in a content/facts session
+
+Once per session (or after Reload Window), call **`perplexity_broker_info`** and confirm `mcp_version` **0.4.5+** and `prompt_suffix_on_submit: true`.
 
 **Two tools only** (no `perplexity_ask`; parameters are `question` and `chat_id` only):
 
@@ -106,15 +153,64 @@ If mid-task you discover **project-specific** unknowns → switch to **workflow 
 
 **Follow-up in the same chat:** always pass the **`chat_id`** from the first submit (URL or slug). Never use `thread_url` — that name is removed.
 
-### Status polling schedule (after submit)
+### Multiple tasks in one submit (preferred for bulk research)
 
-Perplexity web UI can freeze; each `perplexity_get_answer` reloads/opens the thread before reading UI.
+You **can** assign several research jobs in a **single** `perplexity_submit_question` — one poll to `completed`, one `result` to parse. This is the usual way for workflow C and multi-entity fact packs.
 
-1. **First check** — wait **30 seconds** after submit, then call `perplexity_get_answer`.
-2. **Then** — poll **every 60 seconds** until **16 minutes** from submit (inclusive: ~1:00, 2:00, … 16:00) **or** until `status` is `completed` or `error`.
-3. While `running`, compare **`visible_chars`** across polls (stuck count + long wait → note in reply).
+**How to structure `question`:**
+
+- Use a short **Context** once, then numbered **Task 1 / Task 2 / …** (or grouped tables per entity).
+- For each task state: **inputs**, **required fields**, **output shape** (table columns, bullets, citations).
+- Ask for a **single combined answer** with clear headings per task so you can map sections → files or todos.
+
+**Example fragment:**
+
+```text
+Context: UFC fighter pages, publishable stats only with sources.
+
+Task 1 — Shavkat Rakhmonov: UFC record, height, last 7 fights (table).
+Task 2 — …
+Task 3 — …
+
+Output: one markdown doc with ## Task 1, ## Task 2, … and source links per table.
+```
+
+**Broker limits (do not confuse with “parallel tasks”):**
+
+- One browser session runs **one in-flight generation** at a time. A second `submit` while the first is still generating may return **`BUSY`** or queue (policy-dependent) — **do not** fire multiple `submit` calls and implement from whichever finishes first.
+- **Wrong:** three separate `submit` (three `chat_id`) for the same fact wave, then edit while any is `running`.
+- **Right:** one compound `question` **or** strictly **serial** submit → poll `completed` → next submit.
+
+Follow-up refinements on the **same** research use the **same** `chat_id` (additional user message in that Perplexity thread), not a duplicate submit of the full brief.
+
+### Long runs: reasoning and silent periods
+
+Complex briefs (deep comparison, multi-step plans, “think like sub-agents”, many entities, strict output schema) often take **10–15 minutes** in Perplexity — within the normal **16-minute** poll window.
+
+While `status` is **`running`**:
+
+- Perplexity may show **little or no answer text** for a long time — internal **reasoning**, search, or modular steps run **before** the visible reply streams.
+- **`visible_chars` may be `0` or flat** across several polls (e.g. 2–10 minutes). That is **not** automatic failure and **not** permission to implement from memory.
+- Keep polling on schedule; tell the user *“Perplexity still reasoning / no visible answer yet (~Nm), continuing poll…”*.
+- Treat as **stuck** only if `visible_chars` is unchanged for **many** polls **and** you are past ~**12–15 minutes** — then note it in the reply; still prefer `get_answer` over re-submit until `error` or user aborts.
+
+**Agent:** do not stop after one early `get_answer` with `visible_chars: 0`. Do not mark research done or open factual edits until `completed`.
+
+### Polling loop (agent algorithm — same session)
+
+`submit` **only queues** work. `status: "running"` means **zero verified `result`**. Waiting is **several sequential `get_answer` calls**, not one optional check.
+
+1. **`perplexity_submit_question`** → save **`chat_id`** in the reply (repeat in the next user-visible message if the session may summarize).
+2. **Do not** open the implementation branch (no factual MDX, no “wave done”, no build for publishable output).
+3. **First `perplexity_get_answer`** — **required**, ~**30 seconds** after submit (shell `sleep 30` or equivalent between tool rounds).
+4. If `running`: tell the user *“Perplexity still running, polling…”*; wait **60 seconds**; call `get_answer` again. Repeat until **16 minutes** from submit **or** `completed` / `error`.
+5. **Only on `completed`:** parse `result` → then edit/commit/mark research todos.
+6. **Interrupted poll** (user message, context cut, sleep aborted): **resume** with `get_answer(same chat_id)` — **never** re-submit the same research brief; incomplete poll = **unfinished research**, not “continue from memory”.
+7. While `running`, compare **`visible_chars`** across polls; expect **long flat periods** on hard briefs (see **Long runs** above) before calling stuck.
 
 Do not poll more often than this unless the user asks for faster checks.
+
+Perplexity web UI can freeze; each `perplexity_get_answer` reloads/opens the thread before reading UI.
 
 | Tool | Parameter | Default | Notes |
 |------|-----------|---------|--------|
@@ -138,11 +234,16 @@ Research needed:
 - [verify / disprove assumptions]
 
 Output: [bullet summary / comparison table / step-by-step / citations]
+
+# Optional — multiple tasks in one submit:
+Task 1: [scope + required fields + output shape]
+Task 2: …
+Ask for ## Task N headings in one combined answer.
 ```
 
-**Verify MCP build:** call `perplexity_broker_info` → must show `mcp_version` **0.4.4+** and `prompt_suffix_on_submit: true` after Reload Window.
+**Verify MCP build:** call `perplexity_broker_info` → must show `mcp_version` **0.4.5+** and `prompt_suffix_on_submit: true` after Reload Window.
 
-**Submit success:** `{ "ok": true, "mcp_version": "0.4.4", "chat_id": "https://…", "status": "running", "prompt_suffix_applied": true }`
+**Submit success:** `{ "ok": true, "mcp_version": "0.4.5", "chat_id": "https://…", "status": "running", "prompt_suffix_applied": true, "next_step": "…" }`
 
 The suffix is appended in the **broker** on every `/chat/send` (MCP and HTTP). It is not visible in the Cursor `question` arg. In Perplexity the user bubble must include `[Instruction — reply in this chat only]` and the no-files line — **do not** use `----` as a separator (Perplexity hides the tail).
 
@@ -164,6 +265,38 @@ The suffix is appended in the **broker** on every `/chat/send` (MCP and HTTP). I
 | `FAILED` | other | Report; retry once if transient |
 
 Do **not** use removed tools (`perplexity_ask`, `perplexity_health`, `perplexity_ensure_session`, …).
+
+**Submit success** may include `next_step`: always follow it — answers stay invalid until `get_answer` returns `completed`.
+
+### Anti-pattern vs correct pattern
+
+**Wrong (do not do this):**
+
+```text
+perplexity_submit_question → status "running"
+→ immediately Write shavkat-rakhmonov.mdx with fight list from memory
+→ build → mark todos done
+```
+
+Why wrong: `running` = no `result`. UFC-only record (e.g. 7-0) vs pro total (e.g. 19-0) and height (e.g. 185 cm) are easy to confuse without `result`.
+
+**Correct:**
+
+```text
+submit → poll until completed → extract table from result → edit MDX from result/sources only → build
+```
+
+### Publishing rule (factual content)
+
+Numbers in tables, `data-snapshot`, or body copy must come from **`result`** or an official link in **`sources[]`**. If the field is missing in `result`, **do not invent** — omit the row or use neutral “check official …” copy in footer only, not in stat tables.
+
+### Resume after interrupt
+
+On a new turn after interrupt or summary loss:
+
+1. Find the last **`chat_id`** in the transcript.
+2. Call **`perplexity_get_answer`** first — do **not** duplicate `submit` for the same brief.
+3. Continue the polling loop from step 3 until `completed` or `error`.
 
 ---
 
