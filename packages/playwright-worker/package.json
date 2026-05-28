@@ -21,7 +21,7 @@
     "@pdb/ui-selectors": "workspace:*",
     "@pdb/ui-state": "workspace:*",
     "camoufox-js": "0.10.2",
-    "impit-darwin-arm64": "0.13.1",
+    "impit-darwin-arm64": "0.14.0",
     "playwright-core": "1.59.0"
   },
   "devDependencies": {

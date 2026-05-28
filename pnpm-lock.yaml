@@ -130,8 +130,8 @@ importers:
         specifier: 0.10.2
         version: 0.10.2(playwright-core@1.59.0)
       impit-darwin-arm64:
-        specifier: 0.13.1
-        version: 0.13.1
+        specifier: 0.14.0
+        version: 0.14.0
       playwright-core:
         specifier: 1.59.0
         version: 1.59.0
@@ -948,6 +948,12 @@ packages:
 
   impit-darwin-arm64@0.13.1:
     resolution: {integrity: sha512-ZjIbzorKMe5uwEfryFE5GUNpFXlJPlTslLvO67f8rmt48nWu1JDJdSdnEhvselEgyD6Y1tXwYWFFATMWeOX6zQ==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [darwin]
+
+  impit-darwin-arm64@0.14.0:
+    resolution: {integrity: sha512-I/v/raC+kx0dhiTZ7MTNtqDvYz9cuBZYrKR2g1YWsDSF16msTvjYc/4vEII5o7fBeUWyxzt9lC8Ef4HD3Lvi1Q==}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [darwin]
@@ -2387,7 +2393,10 @@ snapshots:
 
   ieee754@1.2.1: {}
 
-  impit-darwin-arm64@0.13.1: {}
+  impit-darwin-arm64@0.13.1:
+    optional: true
+
+  impit-darwin-arm64@0.14.0: {}
 
   impit-darwin-x64@0.13.1:
     optional: true
