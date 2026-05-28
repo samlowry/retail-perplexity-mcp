@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
   <key>Label</key>
-  <string>com.samlowry.perplexity-broker</string>
+  <string>io.perplexity.desktop-broker</string>
   <key>Comment</key>
   <string>Perplexity Desktop Broker HTTP API (127.0.0.1:3317)</string>
   <key>WorkingDirectory</key>

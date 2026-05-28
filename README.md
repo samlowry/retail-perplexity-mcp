@@ -70,3 +70,16 @@ Agents use MCP **`perplexity_submit_question`** (`question` + optional `chat_id`
 | `pnpm test` | Unit tests |
 | `pnpm test:integration` | Live UI tests (`@live`) |
 | `pnpm smoke:worker` | Manual Playwright smoke |
+
+## Open Source Project Files
+
+- [LICENSE](LICENSE) (MIT)
+- [SECURITY.md](SECURITY.md)
+- [CONTRIBUTING.md](CONTRIBUTING.md)
+- [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
+- [CHANGELOG.md](CHANGELOG.md)
+
+## Security and Artifact Policy
+
+- Do not commit `.env` files, browser profile data, logs, HAR files, screenshots, or traces.
+- Use GitHub private vulnerability reporting as described in `SECURITY.md`.

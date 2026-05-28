@@ -1,7 +1,9 @@
 node_modules/
 dist/
 coverage/
-.env
+# Ignore all environment files except the template.
+.env*
+!.env.example
 
 # Runtime / browser data (relative to any app or package cwd)
 **/data/profile/
@@ -14,6 +16,12 @@ data/profile/
 data/logs/
 data/artifacts/
 data/state/
+userData/
+profiles/
+screenshots/
+*.har
+trace.zip
+*.trace.zip
 
 *.log
 .DS_Store

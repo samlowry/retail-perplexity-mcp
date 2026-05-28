@@ -2,7 +2,7 @@
 # Install macOS LaunchAgent: start Perplexity broker at user login.
 set -euo pipefail
 
-LABEL="com.samlowry.perplexity-broker"
+LABEL="io.perplexity.desktop-broker"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 TEMPLATE="${SCRIPT_DIR}/launchd/${LABEL}.plist.template"

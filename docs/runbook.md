@@ -42,7 +42,7 @@ tail -30 data/logs/broker.stderr.log
 
 Look for `pageError.location.url` / `TypeError: Cannot read properties of undefined`.
 
-**Fix:** This repo pins `playwright-core` / `playwright` to **1.59.0**. After pulling: `pnpm install && pnpm build`, then restart the broker (`launchctl kickstart -k gui/$(id -u)/com.samlowry.perplexity-broker` or `pnpm dev:broker`).
+**Fix:** This repo pins `playwright-core` / `playwright` to **1.59.0**. After pulling: `pnpm install && pnpm build`, then restart the broker (`launchctl kickstart -k gui/$(id -u)/io.perplexity.desktop-broker` or `pnpm dev:broker`).
 
 **Avoid:** Running `pnpm dev:broker` while the LaunchAgent is also bound to port 3317 — use one broker instance only.
 

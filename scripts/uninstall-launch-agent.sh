@@ -2,7 +2,7 @@
 # Remove macOS LaunchAgent for Perplexity broker.
 set -euo pipefail
 
-LABEL="com.samlowry.perplexity-broker"
+LABEL="io.perplexity.desktop-broker"
 INSTALLED_PLIST="${HOME}/Library/LaunchAgents/${LABEL}.plist"
 USER_ID="$(id -u)"
 DOMAIN="gui/${USER_ID}"

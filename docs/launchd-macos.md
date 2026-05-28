@@ -18,7 +18,7 @@ The broker must already be up before MCP calls succeed. LaunchAgent keeps the br
 
 | Path | Role |
 |------|------|
-| `scripts/launchd/com.samlowry.perplexity-broker.plist.template` | Template; placeholders replaced at install time |
+| `scripts/launchd/io.perplexity.desktop-broker.plist.template` | Template; placeholders replaced at install time |
 | `scripts/install-launch-agent.sh` | Generates plist, installs to `~/Library/LaunchAgents/`, loads service |
 | `scripts/uninstall-launch-agent.sh` | Unloads and removes the plist |
 | `package.json` → `pnpm launchd:install` / `launchd:uninstall` | Shortcuts to the scripts above |
@@ -32,11 +32,11 @@ When you run `pnpm launchd:install`, the script writes:
 
 | Path | Description |
 |------|-------------|
-| `~/Library/LaunchAgents/com.samlowry.perplexity-broker.plist` | **LaunchAgent plist** — registered with `launchctl` for your user (`gui/<uid>`) |
+| `~/Library/LaunchAgents/io.perplexity.desktop-broker.plist` | **LaunchAgent plist** — registered with `launchctl` for your user (`gui/<uid>`) |
 | `<repo>/data/logs/broker.stdout.log` | Broker stdout (gitignored) |
 | `<repo>/data/logs/broker.stderr.log` | Broker stderr (gitignored) |
 
-**Label (service name):** `com.samlowry.perplexity-broker`
+**Label (service name):** `io.perplexity.desktop-broker`
 
 **Domain:** `gui/$(id -u)` — user session, starts at **login**, not system-wide root.
 
@@ -56,7 +56,7 @@ When you run `pnpm launchd:install`, the script writes:
 Example install target (paths vary per machine):
 
 ```
-~/Library/LaunchAgents/com.samlowry.perplexity-broker.plist
+~/Library/LaunchAgents/io.perplexity.desktop-broker.plist
 ```
 
 ## Prerequisites
@@ -94,7 +94,7 @@ The script:
 
 ```bash
 curl -s http://127.0.0.1:3317/health
-launchctl print gui/$(id -u)/com.samlowry.perplexity-broker
+launchctl print gui/$(id -u)/io.perplexity.desktop-broker
 tail -f data/logs/broker.stderr.log
 ```
 
@@ -115,22 +115,22 @@ Both are gitignored under `data/logs/`.
 pnpm launchd:uninstall
 ```
 
-Removes `~/Library/LaunchAgents/com.samlowry.perplexity-broker.plist` and unloads the job. Logs under `data/logs/` are left on disk.
+Removes `~/Library/LaunchAgents/io.perplexity.desktop-broker.plist` and unloads the job. Logs under `data/logs/` are left on disk.
 
 ## After code or `.env` changes
 
 1. `pnpm build` if broker or worker code changed.
 2. `pnpm launchd:install` — regenerates plist (node path, repo root).
-3. Or restart only: `launchctl kickstart -k gui/$(id -u)/com.samlowry.perplexity-broker`
+3. Or restart only: `launchctl kickstart -k gui/$(id -u)/io.perplexity.desktop-broker`
 
 ## Manual control
 
 ```bash
 # Restart broker process
-launchctl kickstart -k gui/$(id -u)/com.samlowry.perplexity-broker
+launchctl kickstart -k gui/$(id -u)/io.perplexity.desktop-broker
 
 # Stop until next login (unload)
-launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.samlowry.perplexity-broker.plist
+launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/io.perplexity.desktop-broker.plist
 ```
 
 For day-to-day dev you can still run `pnpm dev:broker` manually; avoid two brokers on the same port — stop the agent first or use a different `BROKER_PORT` in `.env`.
@@ -170,7 +170,7 @@ Install script records `$(which node)` in the plist. If you upgrade Node via nvm
 
 | Symptom | Check |
 |---------|--------|
-| `curl` connection refused | `launchctl print gui/$(id -u)/com.samlowry.perplexity-broker`, `broker.stderr.log` |
+| `curl` connection refused | `launchctl print gui/$(id -u)/io.perplexity.desktop-broker`, `broker.stderr.log` |
 | Wrong Perplexity account | Duplicate `data/profile` under `apps/broker/` — use absolute `PROFILE_DIR`, broker cwd = repo root |
 | MCP works but slow first call | Browser cold start; run `pnpm doctor` once after login |
 | Browser opens then vanishes; `runs` keeps increasing | Playwright 1.60.0 crash in `broker.stderr.log` — see [runbook: Browser closes](./runbook.md#browser-closes-right-after-ask-camoufox); pin 1.59.0, `pnpm build`, kickstart agent |
