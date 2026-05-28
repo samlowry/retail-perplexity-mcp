@@ -5,7 +5,7 @@ import { checkPaths } from "./checks/paths.js";
 import { checkSession } from "./checks/session.js";
 import { checkBroker } from "./checks/broker.js";
 
-loadEnv();
+loadEnv({ quiet: true });
 
 const cwd = resolve(import.meta.dirname, "../../..");
 const withBroker = process.argv.includes("--broker");

@@ -7,6 +7,14 @@ updates:
     open-pull-requests-limit: 10
     labels:
       - "dependencies"
+    ignore:
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+    groups:
+      playwright:
+        patterns:
+          - "playwright"
+          - "playwright-core"
 
   - package-ecosystem: "github-actions"
     directory: "/"

@@ -2,7 +2,7 @@ import { config as loadEnv } from "dotenv";
 import { resolve } from "node:path";
 import type { BrowserEngine, WorkerConfig } from "./types.js";
 
-loadEnv();
+loadEnv({ quiet: true });
 
 function parseBrowserEngine(): BrowserEngine {
   const raw = process.env.BROWSER_ENGINE ?? process.env.PLAYWRIGHT_BROWSER ?? "camoufox";
