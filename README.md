@@ -22,6 +22,8 @@
 
 A local Node.js + Playwright broker that exposes an HTTP JSON API and MCP tools so Cursor, Claude Code, OpenAI Codex, OpenClaw, Cline, Windsurf, and Continue agents can submit questions to Perplexity and poll for answers — through your **own browser session**, bypassing rate limits and paywalls on the official API tier.
 
+[![Watch demo video](https://img.youtube.com/vi/sRGc3tB8iNg/maxresdefault.jpg)](https://youtu.be/sRGc3tB8iNg)
+
 ## Architecture
 
 ```
