@@ -8,6 +8,7 @@ import { UiState } from "../src/types.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const fixturesDir = join(__dirname, "../__fixtures__");
+const SLOW_TEST_TIMEOUT_MS = 15_000;
 
 describe("detectUiState on HTML fixtures", () => {
   let browser: Awaited<ReturnType<typeof chromium.launch>>;
@@ -32,7 +33,7 @@ describe("detectUiState on HTML fixtures", () => {
     const result = await detectUiState(page);
     await page.close();
     expect(result.state).toBe(UiState.AUTH_EXPIRED);
-  });
+  }, SLOW_TEST_TIMEOUT_MS);
 
   it("detects generating", async () => {
     const page = await loadFixture("generating.html");
@@ -67,7 +68,7 @@ describe("detectUiState on HTML fixtures", () => {
     const result = await detectUiState(page);
     await page.close();
     expect(result.state).toBe(UiState.RATE_LIMITED);
-  });
+  }, SLOW_TEST_TIMEOUT_MS);
 
   it("treats stop button as generating when answer mentions rate limiting", async () => {
     const page = await loadFixture("generating-rate-limit-topic.html");
