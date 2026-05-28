@@ -10,6 +10,7 @@ on:
 jobs:
   analyze:
     name: Analyze
+    if: ${{ vars.CODEQL_USE_ADVANCED == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       actions: read
