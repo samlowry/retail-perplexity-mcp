@@ -135,11 +135,11 @@ Multiple submits are allowed only when the brief truly splits topics; never para
 
 ## How to call Perplexity MCP
 
-### Step 0 — First submit in a content/facts session
+### MCP tools (only these two)
 
-Once per session (or after Reload Window), call **`perplexity_broker_info`** and confirm `mcp_version` **0.4.5+** and `prompt_suffix_on_submit: true`.
+Do **not** call health checks or any other MCP tool before research. Use only:
 
-**Two tools only** (no `perplexity_ask`; parameters are `question` and `chat_id` only):
+**Two tools only** (no `perplexity_ask`, no `perplexity_broker_info`; parameters are `question` and `chat_id` only):
 
 1. **`perplexity_submit_question`** — `question` + optional **`chat_id`**. Returns **`chat_id`** (Perplexity thread URL) when the prompt is sent.
 2. **`perplexity_get_answer`** — required **`chat_id`**; one call returns UI state and, when ready, **`result`**.
@@ -241,7 +241,7 @@ Task 2: …
 Ask for ## Task N headings in one combined answer.
 ```
 
-**Verify MCP build:** call `perplexity_broker_info` → must show `mcp_version` **0.4.5+** and `prompt_suffix_on_submit: true` after Reload Window.
+**MCP version / suffix:** read `mcp_version` and `prompt_suffix_applied` from the **submit** response (no separate info tool).
 
 **Submit success:** `{ "ok": true, "mcp_version": "0.4.5", "chat_id": "https://…", "status": "running", "prompt_suffix_applied": true, "next_step": "…" }`
 

@@ -7,6 +7,11 @@ and this project follows semantic versioning intent while pre-1.0 changes may in
 
 ## [Unreleased]
 
+### Changed
+
+- MCP exposes only `perplexity_submit_question` and `perplexity_get_answer` (removed `perplexity_broker_info`).
+- MCP tools call the broker directly without a preflight `/health` check (`BROKER_OFFLINE` on connection failure).
+
 ### Added
 
 - Open-source governance and security baseline documents.

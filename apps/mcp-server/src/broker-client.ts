@@ -6,7 +6,7 @@ const BROKER_BASE = `http://${process.env.BROKER_HOST ?? "127.0.0.1"}:${process.
 /** Thrown when the broker HTTP endpoint is unreachable. */
 export class BrokerNetworkError extends Error {
   constructor(cause?: unknown) {
-    super("Broker unreachable");
+    super("Broker is not reachable. Start with pnpm dev:broker.");
     this.name = "BrokerNetworkError";
     if (cause instanceof Error) this.cause = cause;
   }

@@ -5,7 +5,6 @@ import {
   BrokerNetworkError,
   BrokerRequestError,
   brokerFetch,
-  brokerHealth,
   formatAnswer,
   formatTimingsMs,
   parseBrokerErrorBody,
@@ -13,7 +12,6 @@ import {
   type ChatSubmitSuccess,
   type ThreadStatusSuccess,
 } from "./broker-client.js";
-import { CHAT_OUTPUT_INSTRUCTION_SEPARATOR } from "@pdb/types";
 import { MCP_VERSION } from "./version.js";
 
 const SESSION_ID = "default";
@@ -46,18 +44,6 @@ type AgentToolFailure = {
 
 function agentJsonContent(payload: AgentToolSuccess | AgentToolFailure) {
   return { content: [{ type: "text" as const, text: JSON.stringify(payload) }] };
-}
-
-async function ensureBrokerHealthy(): Promise<AgentToolFailure | null> {
-  const healthy = await brokerHealth();
-  if (!healthy) {
-    return {
-      ok: false,
-      code: "BROKER_OFFLINE",
-      message: "Broker is not reachable or /health reported down. Start with pnpm dev:broker.",
-    };
-  }
-  return null;
 }
 
 function failureFromError(error: unknown, chatId?: string): AgentToolFailure {
@@ -148,29 +134,6 @@ const server = new McpServer({
 });
 
 server.tool(
-  "perplexity_broker_info",
-  "Broker/MCP build info: mcp_version, prompt suffix behavior. Call to verify Cursor loaded the latest MCP after Reload Window.",
-  {},
-  async () => {
-    return {
-      content: [
-        {
-          type: "text" as const,
-          text: JSON.stringify({
-            ok: true,
-            mcp_version: MCP_VERSION,
-            prompt_suffix_on_submit: true,
-            prompt_suffix_applied_by: "broker",
-            suffix_separator: CHAT_OUTPUT_INSTRUCTION_SEPARATOR,
-            tools: ["perplexity_submit_question", "perplexity_get_answer", "perplexity_broker_info"],
-          }),
-        },
-      ],
-    };
-  },
-);
-
-server.tool(
   "perplexity_submit_question",
   "Submit a question to Perplexity only — this tool does NOT return an answer. Put multiple numbered tasks in one question when the agent needs several research outputs (one poll, one result). Optional chat_id continues that chat; omit for a new topic. Returns chat_id and status running. Answers are INVALID until perplexity_get_answer returns status completed (or error). You MUST call perplexity_get_answer with this chat_id: first poll ~30s after submit, then every 60s up to 16 minutes. One in-flight request per session: overlapping submit/status calls return BUSY immediately (no queue). Do not edit publishable facts while running.",
   {
@@ -179,9 +142,6 @@ server.tool(
     format: formatSchema,
   },
   async ({ question, chat_id, format }) => {
-    const offline = await ensureBrokerHealthy();
-    if (offline) return agentJsonContent(offline);
-
     try {
       console.error(
         `[perplexity-broker mcp ${MCP_VERSION}] submit question_chars=${question.length}`,
@@ -220,9 +180,6 @@ server.tool(
     format: formatSchema,
   },
   async ({ chat_id, format }) => {
-    const offline = await ensureBrokerHealthy();
-    if (offline) return agentJsonContent(offline);
-
     try {
       const result = await brokerFetch<ThreadStatusSuccess>("/thread/status", {
         method: "POST",
