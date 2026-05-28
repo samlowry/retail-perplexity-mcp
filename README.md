@@ -12,8 +12,15 @@
 [![Node 20+](https://img.shields.io/badge/node-20%2B-brightgreen)](https://nodejs.org)
 [![pnpm 10+](https://img.shields.io/badge/pnpm-10%2B-orange)](https://pnpm.io)
 [![MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![Cursor](https://img.shields.io/badge/Cursor-compatible-111111?logo=cursor)](https://cursor.com/docs/mcp)
+[![Claude Code](https://img.shields.io/badge/Claude%20Code-compatible-2C2C2C?logo=anthropic)](https://code.claude.com/docs/en/mcp)
+[![OpenAI Codex](https://img.shields.io/badge/OpenAI%20Codex-compatible-0A0A0A?logo=openai)](https://github.com/openai/codex)
+[![OpenClaw](https://img.shields.io/badge/OpenClaw-compatible-3B82F6)](https://docs.openclaw.ai/cli/mcp)
+[![Cline](https://img.shields.io/badge/Cline-compatible-7C3AED)](https://docs.cline.bot/mcp/mcp-overview)
+[![Windsurf](https://img.shields.io/badge/Windsurf-compatible-0EA5E9)](https://docs.windsurf.com/windsurf/cascade/mcp)
+[![Continue](https://img.shields.io/badge/Continue-compatible-22C55E)](https://docs.continue.dev/customize/deep-dives/mcp)
 
-A local Node.js + Playwright broker that exposes an HTTP JSON API and MCP tools so Cursor agents can submit questions to Perplexity and poll for answers — through your **own browser session**, bypassing rate limits and paywalls on the official API tier.
+A local Node.js + Playwright broker that exposes an HTTP JSON API and MCP tools so Cursor, Claude Code, OpenAI Codex, OpenClaw, Cline, Windsurf, and Continue agents can submit questions to Perplexity and poll for answers — through your **own browser session**, bypassing rate limits and paywalls on the official API tier.
 
 ## Architecture
 
