@@ -172,7 +172,7 @@ server.tool(
 
 server.tool(
   "perplexity_submit_question",
-  "Queue a question in Perplexity only — this tool does NOT return an answer. Put multiple numbered tasks in one question when the agent needs several research outputs (one poll, one result). Optional chat_id continues that chat; omit for a new topic. Returns chat_id and status running. Answers are INVALID until perplexity_get_answer returns status completed (or error). You MUST call perplexity_get_answer with this chat_id: first poll ~30s after submit, then every 60s up to 16 minutes. Do not parallel-submit on one session (BUSY). Do not edit publishable facts while running.",
+  "Submit a question to Perplexity only — this tool does NOT return an answer. Put multiple numbered tasks in one question when the agent needs several research outputs (one poll, one result). Optional chat_id continues that chat; omit for a new topic. Returns chat_id and status running. Answers are INVALID until perplexity_get_answer returns status completed (or error). You MUST call perplexity_get_answer with this chat_id: first poll ~30s after submit, then every 60s up to 16 minutes. One in-flight request per session: overlapping submit/status calls return BUSY immediately (no queue). Do not edit publishable facts while running.",
   {
     question: questionSchema,
     chat_id: chatIdSchema,
@@ -214,7 +214,7 @@ server.tool(
 
 server.tool(
   "perplexity_get_answer",
-  "Poll a queued question by chat_id (from perplexity_submit_question). Opens/reloads the Perplexity thread. status running means no verified result yet — keep polling (~30s first check, then every 60s, up to 16 min). Complex multi-task briefs may run 10-15 min with visible_chars 0 or flat while Perplexity reasons; that is normal — keep polling. Only status completed includes trustworthy result; error ends the poll. Pack several numbered tasks into one submit question when possible; do not parallel-submit on one session.",
+  "Poll a submitted question by chat_id (from perplexity_submit_question). Opens/reloads the Perplexity thread. status running means no verified result yet — keep polling (~30s first check, then every 60s, up to 16 min). Complex multi-task briefs may run 10-15 min with visible_chars 0 or flat while Perplexity reasons; that is normal — keep polling. Only status completed includes trustworthy result; error ends the poll. Pack several numbered tasks into one submit question when possible; one in-flight request per session, overlaps return BUSY immediately (no queue).",
   {
     chat_id: chatIdRequiredSchema,
     format: formatSchema,

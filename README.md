@@ -86,6 +86,8 @@ The two-step tool contract:
 | 1 | `perplexity_submit_question` | `question`, optional `chat_id` | Returns `chat_id` |
 | 2 | `perplexity_get_answer` | `chat_id` | Poll until `completed` or `error` |
 
+Concurrency model: one in-flight request per session. If another request overlaps, broker returns `BUSY` immediately (no FIFO queue). Keep polling the original `chat_id`.
+
 ## Agent skill: how to use it correctly
 
 The project ships with a dedicated Cursor skill:

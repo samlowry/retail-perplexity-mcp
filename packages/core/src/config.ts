@@ -3,8 +3,6 @@ import { resolve } from "node:path";
 
 loadEnv();
 
-export type ConcurrentRequestPolicy = "reject" | "fifo";
-
 export interface AppConfig {
   brokerHost: string;
   brokerPort: number;
@@ -18,7 +16,6 @@ export interface AppConfig {
   allowFileUpload: boolean;
   allowModelSwitch: boolean;
   perplexityUrl: string;
-  concurrentRequestPolicy: ConcurrentRequestPolicy;
 }
 
 function parseBool(value: string | undefined, defaultValue: boolean): boolean {
@@ -46,6 +43,5 @@ export function loadConfig(cwd = process.cwd()): AppConfig {
     allowFileUpload: parseBool(process.env.ALLOW_FILE_UPLOAD, true),
     allowModelSwitch: parseBool(process.env.ALLOW_MODEL_SWITCH, true),
     perplexityUrl: process.env.PERPLEXITY_URL ?? "https://www.perplexity.ai/",
-    concurrentRequestPolicy: (process.env.CONCURRENT_REQUEST_POLICY ?? "reject") as ConcurrentRequestPolicy,
   };
 }

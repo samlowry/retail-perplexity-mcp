@@ -177,7 +177,7 @@ Output: one markdown doc with ## Task 1, ## Task 2, … and source links per tab
 
 **Broker limits (do not confuse with “parallel tasks”):**
 
-- One browser session runs **one in-flight generation** at a time. A second `submit` while the first is still generating may return **`BUSY`** or queue (policy-dependent) — **do not** fire multiple `submit` calls and implement from whichever finishes first.
+- One browser session runs **one in-flight generation** at a time. A second overlapping `submit`/poll while the first is still running returns **`BUSY` immediately** (no queue) — **do not** fire multiple `submit` calls and implement from whichever finishes first.
 - **Wrong:** three separate `submit` (three `chat_id`) for the same fact wave, then edit while any is `running`.
 - **Right:** one compound `question` **or** strictly **serial** submit → poll `completed` → next submit.
 
@@ -198,7 +198,7 @@ While `status` is **`running`**:
 
 ### Polling loop (agent algorithm — same session)
 
-`submit` **only queues** work. `status: "running"` means **zero verified `result`**. Waiting is **several sequential `get_answer` calls**, not one optional check.
+`submit` starts one in-flight run and returns `status: "running"` (not a result). `status: "running"` means **zero verified `result`**. Waiting is **several sequential `get_answer` calls**, not one optional check.
 
 1. **`perplexity_submit_question`** → save **`chat_id`** in the reply (repeat in the next user-visible message if the session may summarize).
 2. **Do not** open the implementation branch (no factual MDX, no “wave done”, no build for publishable output).

@@ -13,4 +13,4 @@ For each run `1..10`:
 
 Optional MCP run: `perplexity_submit_question` then `perplexity_get_answer` until `status: completed` with `result`.
 
-Concurrent test (once): second `send` while first generating → rejected or queued per `CONCURRENT_REQUEST_POLICY`.
+Concurrent test (once): second overlapping request while first is running → immediate `CONFLICT`/`BUSY` (no queue); continue polling the original `chatId`.

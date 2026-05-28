@@ -22,7 +22,7 @@ export class BrokerService {
   readonly log: JsonLogger;
 
   constructor(private readonly config: AppConfig) {
-    this.lock = new SessionLock(config.concurrentRequestPolicy);
+    this.lock = new SessionLock();
     this.log = new JsonLogger(config.logLevel as "info");
     this.worker = new PlaywrightWorker({
       profileDir: config.profileDir,

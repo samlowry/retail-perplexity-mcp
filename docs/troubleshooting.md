@@ -9,6 +9,6 @@
 | Follow-up in same thread: `get_answer` returns old completed text while new answer generates | Status poll no longer reloads the thread tab by default; live stop/streaming on the page wins over the previous answer block. Rebuild `ui-state` + worker and restart broker. |
 | `GENERATION_TIMEOUT` | Increase `DEFAULT_TIMEOUT_MS`; check network |
 | `RATE_LIMITED` | Wait and retry. If it appears mid-generation on long answers, rebuild broker — older detectors matched "rate limiting" inside answer text. |
-| `CONFLICT` | Another job holds session; use queue or wait |
+| `CONFLICT` | Another request is already in flight for this session; overlap is rejected immediately (BUSY, no queue). Keep polling the original `chat_id` or wait and retry. |
 
 Artifacts: `./data/artifacts/`

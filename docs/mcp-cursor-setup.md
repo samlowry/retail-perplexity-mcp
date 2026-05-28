@@ -39,6 +39,8 @@ After changes: **Reload Window** in Cursor so MCP/skills refresh.
 1. **`perplexity_submit_question`** — `question` + optional **`chat_id`**. Returns **`chat_id`** (Perplexity thread URL) when the prompt is on the page.
 2. **`perplexity_get_answer`** — same **`chat_id`** until `completed` or `error`.
 
+Concurrency model: one in-flight request per session. If a second submit/poll overlaps, broker returns `BUSY` immediately (no FIFO queue); keep polling the original `chat_id`.
+
 ### Chat targeting
 
 | `chat_id` on submit | Behavior |

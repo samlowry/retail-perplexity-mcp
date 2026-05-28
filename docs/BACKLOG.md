@@ -4,7 +4,7 @@ Local Node.js + Playwright broker: Cursor → MCP (thin) → HTTP broker → Pla
 
 **Platforms:** macOS (P0), Linux desktop (P1 parity). **Out of scope:** Windows, Docker-default, headless-first, fleet, auto-login, anti-bot bypass.
 
-**Session invariant:** one profile, one active tab, one in-flight generation per `session_id`; concurrent requests queue or reject (config), never race the same tab.
+**Session invariant:** one profile, one active tab, one in-flight generation per `session_id`; overlapping requests are rejected as BUSY (no queue), never race the same tab.
 
 ---
 
@@ -87,7 +87,7 @@ Local Node.js + Playwright broker: Cursor → MCP (thin) → HTTP broker → Pla
 | C-02 | P0 | Structured JSON logger + step names (`browser.launch`, …) | `packages/core/src/logger.ts` | project skill (observability) | C-01 |
 | C-03 | P0 | Job state machine: transitions + illegal transition guard | `packages/core/src/job-fsm.ts` | `modern-javascript-patterns` | B-02 |
 | C-04 | P0 | In-memory job store + file snapshot optional (`data/state/`) | `packages/core/src/job-store.ts` | project skill | C-03 |
-| C-05 | P0 | Session mutex / queue: one worker action per `session_id` | `packages/core/src/session-lock.ts` | project skill | C-03 |
+| C-05 | P0 | Session mutex: one worker action per `session_id` (BUSY on overlap) | `packages/core/src/session-lock.ts` | project skill | C-03 |
 | C-06 | P0 | `BrokerService` orchestrating worker calls inside jobs | `packages/core/src/broker-service.ts` | `nodejs-backend-patterns` | C-04, C-05, E-* |
 | C-07 | P0 | Fastify app: bind `127.0.0.1`, helmet, JSON body limits | `apps/broker/src/server.ts` | `fastify-best-practices` | C-01 |
 | C-08 | P0 | `POST /session/ensure` | `apps/broker/src/routes/session.ts` | `api-design-principles` | C-06, C-07 |
