@@ -79,6 +79,74 @@ The two-step tool contract:
 | 1 | `perplexity_submit_question` | `question`, optional `chat_id` | Returns `chat_id` |
 | 2 | `perplexity_get_answer` | `chat_id` | Poll until `completed` or `error` |
 
+## Agent skill: how to use it correctly
+
+The project ships with a dedicated Cursor skill:
+`/.cursor/skills/perplexity-desktop-broker/SKILL.md`.
+
+This skill is not a generic hint file. It is an operational contract for any
+agent that works with factual or implementation-critical tasks.
+
+### What this skill enforces
+
+- **Research-before-reasoning:** submit research first, then reason and edit.
+- **Two-call workflow only:** `perplexity_submit_question` then
+  `perplexity_get_answer`.
+- **Mandatory polling:** `running` means "not ready yet", not "good enough".
+- **No factual edits from memory:** tables, dates, metrics, and records must come
+  from the completed `result` (or official links in `sources`).
+- **Resume-safe behavior:** if interrupted, continue with `get_answer` using the
+  same `chat_id`, not a duplicate submit.
+
+### Recommended workflow for agents
+
+1. Build one complete research brief (goal, repo context, constraints, output
+   shape).
+2. Call `perplexity_submit_question` and store the returned `chat_id`.
+3. Poll with `perplexity_get_answer` until `completed` or `error`.
+4. Only after `completed`: implement, edit docs, or publish factual text.
+
+This pattern is the most reliable way to avoid stale facts and "hallucinated"
+numbers during long multi-file updates.
+
+### Common anti-patterns to avoid
+
+- Submitting once and writing factual content while status is still `running`.
+- Re-submitting the same brief instead of polling the existing `chat_id`.
+- Using stale fact packs as a replacement for a fresh submit+poll cycle.
+- Mixing multiple in-flight submissions for one factual wave.
+
+### Why this matters in production
+
+For this broker, most expensive failures are not code style issues; they are
+factual integrity issues (wrong records, wrong stats, outdated policy details).
+The skill is designed to make those failures structurally unlikely by forcing
+verified data flow before edits.
+
+## MCP client compatibility (top clients)
+
+This broker is transport-agnostic on the MCP layer and works with any MCP host
+that supports local stdio servers or remote MCP endpoints, depending on your
+deployment setup.
+
+Verified compatibility (official docs and/or first-party references, May 2026):
+
+| Client | MCP support | Notes |
+|--------|-------------|-------|
+| Cursor (IDE + CLI + Cloud Agents) | Native | Project/global `mcp.json`, OAuth-capable, supports tools/resources/prompts/apps. |
+| Claude Code | Native | Full MCP management via CLI and `/mcp`, supports local and remote servers. |
+| Claude Desktop | Native | Supports local MCP servers and desktop extensions (`.mcpb`). |
+| OpenAI Codex (CLI/App) | Native | Supports MCP server config and MCP management commands. |
+| OpenClaw | Native | Supports MCP as client and can also expose itself via `openclaw mcp serve`. |
+| Cline (VS Code + CLI) | Native | MCP marketplace + manual config, local and remote transports. |
+| Windsurf (Cascade) | Native | Built-in MCP support and marketplace; configurable via `mcp_config.json`. |
+| Continue (VS Code/JetBrains extension) | Native (Agent mode) | MCP works in Agent mode; supports JSON-format interop from Cursor/Cline-style configs. |
+| VS Code with GitHub Copilot agent tools | Native | First-party docs include MCP server add/manage flow and MCP app support. |
+| Goose | Native | Extension system is MCP-based; supports local and remote MCP transports. |
+
+If your MCP client can launch stdio servers and forward tool calls correctly,
+it can typically use this broker with minimal or zero adaptation.
+
 ## macOS: auto-start at login
 
 Install a LaunchAgent so the broker starts when you log in (MCP is still launched by Cursor on demand):
