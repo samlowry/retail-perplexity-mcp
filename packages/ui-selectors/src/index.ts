@@ -10,3 +10,4 @@ export * from "./answer.js";
 export * from "./auth.js";
 export * from "./attachment.js";
 export * from "./model.js";
+export * from "./answer-attribution.js";

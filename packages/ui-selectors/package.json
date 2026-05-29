@@ -16,6 +16,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@pdb/types": "workspace:*",
     "playwright": "1.60.0"
   },
   "devDependencies": {

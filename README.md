@@ -168,9 +168,9 @@ pnpm build && pnpm launchd:install
 
 Full paths, architecture, logs, and uninstall instructions: [docs/launchd-macos.md](docs/launchd-macos.md).
 
-## Linux
+## Platforms (macOS, Linux, Windows)
 
-Same flow as macOS. Use headed Camoufox (`HEADLESS=0`) for the initial login. X11 or Wayland display is required during that step; subsequent headless runs work without a display.
+See [docs/platforms.md](docs/platforms.md) for launchd, systemd, Task Scheduler, and path notes.
 
 ## Scripts
 
@@ -181,8 +181,9 @@ Same flow as macOS. Use headed Camoufox (`HEADLESS=0`) for the initial login. X1
 | `pnpm doctor` | Check environment and session health |
 | `pnpm launchd:install` | macOS: install broker as a LaunchAgent |
 | `pnpm launchd:uninstall` | macOS: remove the LaunchAgent |
-| `pnpm test` | Unit tests |
-| `pnpm test:integration` | Live UI tests (requires active session, tagged `@live`) |
+| `pnpm test` / `pnpm test:smoke` | Unit tests (default CI) |
+| `pnpm test:live` | Live broker + UI tests (`describe.skip` until you enable `@live`) |
+| `pnpm lint` | ESLint (TypeScript) |
 | `pnpm smoke:worker` | Manual Playwright smoke test |
 
 ## Security and artifacts
@@ -193,6 +194,8 @@ Same flow as macOS. Use headed Camoufox (`HEADLESS=0`) for the initial login. X1
 ## Project docs
 
 - [docs/BACKLOG.md](docs/BACKLOG.md) — roadmap and open issues
+- [docs/platforms.md](docs/platforms.md) — macOS, Linux, Windows
+- [docs/acceptance.md](docs/acceptance.md) — manual 10× release checklist
 - [.cursor/skills/perplexity-desktop-broker/SKILL.md](.cursor/skills/perplexity-desktop-broker/SKILL.md) — agent skill spec
 - [CHANGELOG.md](CHANGELOG.md) — version history
 - [CONTRIBUTING.md](CONTRIBUTING.md) — contribution guide

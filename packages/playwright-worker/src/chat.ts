@@ -1,5 +1,11 @@
 import type { Locator, Page } from "playwright-core";
-import { getPromptInput, getStopButton, getSubmitButton } from "@pdb/ui-selectors";
+import {
+  getPromptInput,
+  getStopButton,
+  getSubmitButton,
+  readSubmitFormContext,
+} from "@pdb/ui-selectors";
+import type { SubmitFormContext } from "@pdb/types";
 import { UiState, waitForUiState } from "@pdb/ui-state";
 import { BrokerErrorCode } from "@pdb/types";
 import { captureArtifacts } from "./artifacts.js";
@@ -64,7 +70,7 @@ async function submitPrompt(
   }
 }
 
-export async function sendPrompt(page: Page, text: string): Promise<void> {
+export async function sendPrompt(page: Page, text: string): Promise<SubmitFormContext> {
   const input = await getPromptInput(page);
   if (!input) {
     throw {
@@ -75,8 +81,10 @@ export async function sendPrompt(page: Page, text: string): Promise<void> {
   }
 
   await fillPromptInput(page, input.locator, text);
+  const submitContext = await readSubmitFormContext(page);
   const submit = await getSubmitButton(page);
   await submitPrompt(page, input.locator, submit);
+  return submitContext;
 }
 
 export async function waitForCompletion(

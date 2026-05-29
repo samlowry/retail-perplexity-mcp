@@ -319,7 +319,7 @@ Broker repo: `retail-perplexity-mcp` (this workspace).
 3. Profile: absolute `PROFILE_DIR` in `.env` (see `docs/runbook.md`)
 4. Login once in headed Camoufox if `NEEDS_LOGIN`
 
-**Planned:** `model_used` / `reasoning_enabled` in response — Epic L in `docs/BACKLOG.md`.
+**Model metadata:** `perplexity_submit_question` returns `submit_model` and `submit_reasoning_enabled` (compose form at send). `perplexity_get_answer` when `completed` returns `prepared_using` (from “Prepared using …” attribution). Not present on `running` polls.
 
 ---
 
