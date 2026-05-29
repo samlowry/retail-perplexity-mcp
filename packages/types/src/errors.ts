@@ -30,6 +30,8 @@ export interface BrokerError {
   message: string;
   lastUiState?: string;
   artifacts?: ErrorArtifacts;
+  /** Worker action log and other debug context (best-effort). */
+  debug?: Record<string, unknown>;
 }
 
 export function isBrokerError(value: unknown): value is BrokerError {
