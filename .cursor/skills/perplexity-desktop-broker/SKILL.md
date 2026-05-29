@@ -253,13 +253,15 @@ Ask for ## Task N headings in one combined answer.
 
 **MCP version / suffix:** read `mcp_version` and `prompt_suffix_applied` from the **submit** response (no separate info tool).
 
-**Submit success:** `{ "ok": true, "mcp_version": "0.4.5", "chat_id": "https://…", "status": "running", "prompt_suffix_applied": true, "next_step": "…" }`
+**Model metadata (read-only):** `submit_model` and `submit_reasoning_enabled` on **submit** (compose form at send). `prepared_using` only when **`get_answer`** returns `status: "completed"` — omitted on `running` polls. Values may be `null` if the UI hides controls. You cannot set model/reasoning via MCP.
+
+**Submit success:** `{ "ok": true, "mcp_version": "0.5.0", "chat_id": "https://…", "status": "running", "submit_model": "GPT-5.4", "submit_reasoning_enabled": null, "prompt_suffix_applied": true, "next_step": "…" }`
 
 The suffix is appended in the **broker** on every `/chat/send` (MCP and HTTP). It is not visible in the Cursor `question` arg. In Perplexity the user bubble must include `[Instruction — reply in this chat only]` and the no-files line — **do not** use `----` as a separator (Perplexity hides the tail).
 
-**Status while running:** `{ "ok": true, "chat_id": "…", "status": "running", "visible_chars": 1204 }`
+**Status while running:** `{ "ok": true, "chat_id": "…", "status": "running", "visible_chars": 1204 }` — no `prepared_using`.
 
-**Status completed:** `{ "ok": true, "chat_id": "…", "status": "completed", "result": "…", "sources"?, "timings_ms"? }`
+**Status completed:** `{ "ok": true, "chat_id": "…", "status": "completed", "result": "…", "prepared_using": "GPT-5.4", "sources"?, "timings_ms"? }`
 
 **Status error (Perplexity/UI):** `{ "ok": true, "chat_id": "…", "status": "error", "code": "…", "error_message": "…" }`
 
@@ -319,8 +321,6 @@ Broker repo: `retail-perplexity-mcp` (this workspace).
 3. Profile: absolute `PROFILE_DIR` in `.env` (see `docs/runbook.md`)
 4. Login once in headed Camoufox if `NEEDS_LOGIN`
 
-**Model metadata:** `perplexity_submit_question` returns `submit_model` and `submit_reasoning_enabled` (compose form at send). `perplexity_get_answer` when `completed` returns `prepared_using` (from “Prepared using …” attribution). Not present on `running` polls.
-
 ---
 
 ## Maintainer reference (editing this broker only)
@@ -329,6 +329,6 @@ Cursor → `perplexity_submit_question` / `perplexity_get_answer` → broker `:3
 
 Packages: `apps/broker`, `apps/mcp-server`, `packages/playwright-worker`, `packages/ui-selectors`, `packages/ui-state`, `packages/core`, `packages/types`.
 
-Agents: **`perplexity_submit_question`** — no `chat_id` = new topic; with `chat_id` = same chat. **`perplexity_get_answer`** reads UI by `chat_id`. HTTP `POST /chat/send`, `POST /thread/status`.
+Agents: **`perplexity_submit_question`** — no `chat_id` = new topic; with `chat_id` = same chat. **`perplexity_get_answer`** reads UI by `chat_id`. HTTP `POST /chat/send` (`submitContext`), `POST /thread/status` (`answer.preparedUsing` when completed). Docs: repo `docs/mcp-cursor-setup.md`.
 
 Coding skills: `playwright-best-practices`, `mcp-builder`, `fastify-best-practices`, `nodejs-backend-patterns`.

@@ -85,8 +85,10 @@ The two-step tool contract:
 
 | Step | Tool | Parameters | When done |
 |------|------|------------|-----------|
-| 1 | `perplexity_submit_question` | `question`, optional `chat_id` | Returns `chat_id` |
+| 1 | `perplexity_submit_question` | `question`, optional `chat_id` | `chat_id` + model fields (see below) |
 | 2 | `perplexity_get_answer` | `chat_id` | Poll until `completed` or `error` |
+
+**Model metadata (read-only, best-effort):** on submit you get `submit_model` and `submit_reasoning_enabled` from the Perplexity compose form; when a poll returns `completed`, you also get `prepared_using` (from the “Prepared using …” line). Not included while `status` is `running`. Full JSON shapes: [docs/mcp-cursor-setup.md](docs/mcp-cursor-setup.md).
 
 Concurrency model: one in-flight request per session. If another request overlaps, broker returns `BUSY` immediately (no FIFO queue). Keep polling the original `chat_id`.
 
