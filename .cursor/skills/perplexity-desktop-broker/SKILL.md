@@ -185,14 +185,14 @@ Follow-up refinements on the **same** research use the **same** `chat_id` (addit
 
 ### Long runs: reasoning and silent periods
 
-Complex briefs (deep comparison, multi-step plans, “think like sub-agents”, many entities, strict output schema) often take **10–15 minutes** in Perplexity — within the normal **16-minute** poll window.
+Complex briefs (deep comparison, multi-step plans, “think like sub-agents”, many entities, strict output schema) often take **10–15 minutes** in Perplexity — within the normal **20-minute** poll window.
 
 While `status` is **`running`**:
 
 - Perplexity may show **little or no answer text** for a long time — internal **reasoning**, search, or modular steps run **before** the visible reply streams.
 - **`visible_chars` may be `0` or flat** across several polls (e.g. 2–10 minutes). That is **not** automatic failure and **not** permission to implement from memory.
 - Keep polling on schedule; tell the user *“Perplexity still reasoning / no visible answer yet (~Nm), continuing poll…”*.
-- Treat as **stuck** only if `visible_chars` is unchanged for **many** polls **and** you are past ~**12–15 minutes** — then note it in the reply; still prefer `get_answer` over re-submit until `error` or user aborts.
+- Treat as **stuck** only if `visible_chars` is unchanged for **many** polls **and** you are past the **15-minute** poll — then note it in the reply; still prefer `get_answer` over re-submit until `error` or user aborts.
 
 **Agent:** do not stop after one early `get_answer` with `visible_chars: 0`. Do not mark research done or open factual edits until `completed`.
 
@@ -202,13 +202,23 @@ While `status` is **`running`**:
 
 1. **`perplexity_submit_question`** → save **`chat_id`** in the reply (repeat in the next user-visible message if the session may summarize).
 2. **Do not** open the implementation branch (no factual MDX, no “wave done”, no build for publishable output).
-3. **First `perplexity_get_answer`** — **required**, ~**30 seconds** after submit (shell `sleep 30` or equivalent between tool rounds).
-4. If `running`: tell the user *“Perplexity still running, polling…”*; wait **60 seconds**; call `get_answer` again. Repeat until **16 minutes** from submit **or** `completed` / `error`.
+3. **Poll schedule** — call **`perplexity_get_answer`** only at these elapsed times from submit (shell `sleep` between tool rounds). **Do not** poll at 30 s, 1 min, or other intervals.
+
+| Poll | Elapsed from submit | Wait before this poll (from previous step) |
+|------|---------------------|---------------------------------------------|
+| 1 | **2 min** | `sleep 120` after submit |
+| 2 | **3 min** | `sleep 60` |
+| 3 | **5 min** | `sleep 120` |
+| 4 | **10 min** | `sleep 300` |
+| 5 | **15 min** | `sleep 300` |
+| 6 | **20 min** | `sleep 300` |
+
+4. After each poll while `running`: tell the user *“Perplexity still running, next poll at ~Nm…”* (use the next row’s elapsed time). Stop the schedule on **`completed`** / **`error`** (success early is fine).
 5. **Only on `completed`:** parse `result` → then edit/commit/mark research todos.
-6. **Interrupted poll** (user message, context cut, sleep aborted): **resume** with `get_answer(same chat_id)` — **never** re-submit the same research brief; incomplete poll = **unfinished research**, not “continue from memory”.
+6. **Interrupted poll** (user message, context cut, sleep aborted): **resume** with `get_answer(same chat_id)` — pick up the **next** due poll from the table (by elapsed time since submit), **never** re-submit the same research brief; incomplete poll = **unfinished research**, not “continue from memory”.
 7. While `running`, compare **`visible_chars`** across polls; expect **long flat periods** on hard briefs (see **Long runs** above) before calling stuck.
 
-Do not poll more often than this unless the user asks for faster checks.
+Do not poll more often than this schedule unless the user asks for faster checks.
 
 Perplexity web UI can freeze; each `perplexity_get_answer` reloads/opens the thread before reading UI.
 
