@@ -93,32 +93,38 @@ export function uiStateToPollResult(state: UiStateType, detail?: string): Genera
   };
 }
 
-function normalizeThreadUrl(url: string): string {
+/** Exported for tests. */
+export function normalizeThreadUrl(url: string): string {
   return url.split("#")[0].replace(/\/$/, "");
 }
 
-export type OpenThreadUrlOptions = {
-  /**
-   * Reload when the tab is already on this thread. Default false for status polls so
-   * an in-flight follow-up (stop/streaming on live DOM) is not replaced by the last saved answer.
-   */
-  reloadIfActive?: boolean;
-};
+/**
+ * How to open a Perplexity thread before broker work.
+ * See docs/internal/thread-navigation.md.
+ */
+export const ThreadOpenPolicy = {
+  /** Status poll: reload when tab is already on this thread (unfreeze SPA). */
+  StatusPoll: "statusPoll",
+  /** Follow-up submit: keep live DOM when already on thread; goto when elsewhere. */
+  FollowUpSubmit: "followUpSubmit",
+} as const;
+
+export type ThreadOpenPolicy =
+  (typeof ThreadOpenPolicy)[keyof typeof ThreadOpenPolicy];
 
 /**
- * Open the chat-of-interest before a UI status read.
- * Navigates when on another URL; reloads only when reloadIfActive is true (e.g. frozen SPA retry).
+ * Open the chat-of-interest before submit or status read.
+ * Different URL → full goto. Same URL → reload only for statusPoll.
  */
 export async function openThreadUrl(
   page: Page,
   threadUrl: string,
-  options: OpenThreadUrlOptions = {},
+  policy: ThreadOpenPolicy = ThreadOpenPolicy.FollowUpSubmit,
 ): Promise<void> {
-  const reloadIfActive = options.reloadIfActive ?? false;
   const current = normalizeThreadUrl(page.url());
   const target = normalizeThreadUrl(threadUrl);
   if (current === target) {
-    if (reloadIfActive) {
+    if (policy === ThreadOpenPolicy.StatusPoll) {
       await page.reload({ waitUntil: "domcontentloaded" });
       await page.waitForLoadState("load").catch(() => undefined);
     }

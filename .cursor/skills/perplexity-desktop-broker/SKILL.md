@@ -149,7 +149,7 @@ Do **not** call health checks or any other MCP tool before research. Use only:
 | Submit `chat_id` | Meaning |
 |------------------|---------|
 | **Omitted** | **New topic** (broker starts a new Perplexity thread) |
-| **Set** | **Same chat** — full URL from a prior submit **or** slug only (`abbc8f96-2fbf-…`). Broker opens or **reloads** that thread before send/status (unfreezes stuck UI). |
+| **Set** | **Same chat** — full URL from a prior submit **or** slug only (`abbc8f96-2fbf-…`). Broker **goto**s that thread if the tab is elsewhere; **does not reload** before follow-up send. **`get_answer` reloads** when the tab is already on that URL. |
 
 **Follow-up in the same chat:** always pass the **`chat_id`** from the first submit (URL or slug). Never use `thread_url` — that name is removed.
 
@@ -220,7 +220,7 @@ While `status` is **`running`**:
 
 Do not poll more often than this schedule unless the user asks for faster checks.
 
-Perplexity web UI can freeze; each `perplexity_get_answer` reloads/opens the thread before reading UI.
+Perplexity web UI can freeze; each `perplexity_get_answer` **reloads** the thread if the tab is already on that `chat_id`, or **goto**s it if not. Follow-up `submit` with `chat_id` does not reload when already on that thread.
 
 | Tool | Parameter | Default | Notes |
 |------|-----------|---------|--------|
