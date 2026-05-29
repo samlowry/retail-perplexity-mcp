@@ -22,6 +22,14 @@
 
 A local Node.js + Playwright broker that exposes an HTTP JSON API and MCP tools so Cursor, Claude Code, OpenAI Codex, OpenClaw, Cline, Windsurf, and Continue agents can submit questions to Perplexity and poll for answers — through your **own browser session**, bypassing rate limits and paywalls on the official API tier.
 
+### MCP at Perplexity speed
+
+Perplexity can take **minutes** to answer. One blocking tool call would freeze your whole MCP session for that entire wait.
+
+**Submit, then poll.** `perplexity_submit_question` hands off the job and returns a `chat_id` in seconds. The broker keeps generating in the browser while your agent polls `perplexity_get_answer` when it is ready — MCP stays responsive.
+
+**Built for short agent timeouts.** Hosts like Cursor advertise ~600s limits but often fail sooner (many users see errors after only a few minutes). Two fast hops — submit + poll — fit inside those ceilings; one long “wait for the answer” call does not.
+
 [![Watch demo video](https://img.youtube.com/vi/sRGc3tB8iNg/maxresdefault.jpg)](https://youtu.be/sRGc3tB8iNg)
 
 ## Architecture
