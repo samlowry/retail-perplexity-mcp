@@ -12,3 +12,5 @@
 | `CONFLICT` | Another request is already in flight for this session; overlap is rejected immediately (BUSY, no queue). Keep polling the original `chat_id` or wait and retry. |
 
 Artifacts: `./data/artifacts/`
+
+On `PROMPT_SEND_FAILED` / `EXTRACTION_FAILED`, broker errors may include `debug.actionLog` (last worker steps) for diagnosis.

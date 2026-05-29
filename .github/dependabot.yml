@@ -23,3 +23,7 @@ updates:
     open-pull-requests-limit: 10
     labels:
       - "dependencies"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
