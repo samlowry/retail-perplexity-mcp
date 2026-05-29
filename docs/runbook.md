@@ -7,6 +7,15 @@
 3. Log in manually in the opened browser
 4. Re-run `pnpm doctor` — expect `perplexity_session: OK`
 
+## CI / pre-flight check
+
+```bash
+pnpm build
+pnpm doctor --broker
+```
+
+`pnpm doctor` exits `0` when all checks pass, `1` when any fail — suitable for scripts and CI gates.
+
 ## Restart broker
 
 Start the broker from the **repository root**, or set **absolute** `PROFILE_DIR` / `ARTIFACTS_DIR` in `.env` (so profile cookies are found regardless of cwd).
