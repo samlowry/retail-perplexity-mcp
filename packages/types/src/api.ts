@@ -1,5 +1,4 @@
 import type { BrokerError } from "./errors.js";
-import type { JobRecord } from "./jobs.js";
 import type { ResponseFormatType } from "./chat.js";
 import type { ThreadStatusResponse } from "./thread-status.js";
 
@@ -31,16 +30,22 @@ export interface ChatSendRequest {
   responseFormat?: ResponseFormatType;
 }
 
+/** Model and reasoning read from the Perplexity compose form at submit time (best-effort). */
+export interface SubmitFormContext {
+  submitModel: string | null;
+  submitReasoningEnabled: boolean | null;
+}
+
 export interface ChatSendResponse {
   ok: true;
   chatId: string;
   /** True when the in-chat-only instruction block was appended on this submit. */
   promptSuffixApplied?: boolean;
+  submitContext: SubmitFormContext;
 }
 
 export interface ChatCancelRequest {
   sessionId: string;
-  jobId?: string;
 }
 
 export interface ChatCancelResponse {
@@ -56,11 +61,6 @@ export interface AttachmentUploadRequest {
 export interface AttachmentUploadResponse {
   ok: true;
   uploaded: boolean;
-}
-
-export interface JobGetResponse {
-  ok: true;
-  job: JobRecord;
 }
 
 export type { ThreadStatusResponse };
@@ -82,7 +82,6 @@ export type ApiSuccessResponse =
   | ChatSendResponse
   | ChatCancelResponse
   | AttachmentUploadResponse
-  | JobGetResponse
   | HealthResponse;
 
 export type ApiResponse = ApiSuccessResponse | BrokerError;
