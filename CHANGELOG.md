@@ -14,6 +14,7 @@ and this project follows semantic versioning intent while pre-1.0 changes may in
 
 ### Added
 
+- Read-only model metadata: `submit_model` / `submit_reasoning_enabled` on submit; `prepared_using` on completed poll (HTTP: `submitContext`, `answer.preparedUsing`).
 - Open-source governance and security baseline documents.
 - GitHub Actions CI and secret scanning workflows.
 - Dependabot configuration for npm and GitHub Actions.

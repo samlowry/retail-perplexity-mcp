@@ -13,8 +13,11 @@
     "dev:mcp": "pnpm --filter @pdb/mcp-server dev",
     "doctor": "pnpm --filter @pdb/doctor start",
     "test": "vitest run",
+    "test:smoke": "vitest run",
     "test:watch": "vitest",
     "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:live": "vitest run --config vitest.integration.config.ts",
+    "lint": "eslint .",
     "test:e2e": "node scripts/e2e-thread-status.mjs",
     "test:e2e:long": "SKIP_SMOKE=1 node scripts/e2e-thread-status.mjs",
     "test:e2e:smoke": "ONLY_SMOKE=1 node scripts/e2e-thread-status.mjs",
@@ -25,9 +28,13 @@
     "typecheck": "pnpm -r run typecheck"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/node": "^22.15.29",
+    "eslint": "^10.4.0",
+    "globals": "^17.6.0",
     "tsx": "^4.19.4",
     "typescript": "6.0.3",
+    "typescript-eslint": "^8.60.0",
     "vitest": "4.1.7"
   },
   "packageManager": "pnpm@10.11.0"

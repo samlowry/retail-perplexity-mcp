@@ -4,6 +4,7 @@ import {
   type BrokerError,
   type ChatAnswerResult,
   type ResponseFormatType,
+  type SubmitFormContext,
 } from "@pdb/types";
 import { checkAuthState } from "@pdb/ui-selectors";
 import { BrowserSessionManager } from "./session.js";
@@ -22,6 +23,7 @@ import { UiState } from "@pdb/ui-state";
 import { uploadFile } from "./attachment.js";
 import type { WorkerConfig } from "./types.js";
 import { captureArtifacts } from "./artifacts.js";
+import { withActionLog } from "./debug-context.js";
 
 /** High-level Playwright operations for Perplexity UI. */
 export class PlaywrightWorker {
@@ -60,7 +62,7 @@ export class PlaywrightWorker {
   async submitPrompt(
     text: string,
     options: { threadUrl?: string },
-  ): Promise<{ threadUrl: string } | BrokerError> {
+  ): Promise<{ threadUrl: string; submitContext: SubmitFormContext } | BrokerError> {
     try {
       if (options.threadUrl) {
         const ready = await this.ensureBrowserReady();
@@ -116,13 +118,13 @@ export class PlaywrightWorker {
         };
       }
       const sendStart = Date.now();
-      await sendPrompt(page, text);
+      const submitContext = await sendPrompt(page, text);
       const sendMs = Date.now() - sendStart;
       void sendMs;
 
       await waitForUiState(page, [UiState.GENERATING, UiState.COMPLETE, UiState.READY], 10_000);
       const threadUrl = page.url();
-      return { threadUrl };
+      return { threadUrl, submitContext };
     } catch (error) {
       if (typeof error === "object" && error !== null && "ok" in error) {
         return error as BrokerError;
@@ -131,7 +133,7 @@ export class PlaywrightWorker {
       const artifacts = failPage
         ? await captureArtifacts(failPage, this.config.artifactsDir, "submit-error")
         : { screenshot: undefined, htmlSnapshot: undefined };
-      return {
+      return withActionLog(this.session, {
         ok: false,
         code: BrokerErrorCode.PROMPT_SEND_FAILED,
         message: error instanceof Error ? error.message : String(error),
@@ -139,7 +141,7 @@ export class PlaywrightWorker {
           screenshot: artifacts.screenshot,
           htmlSnapshot: artifacts.htmlSnapshot,
         },
-      };
+      });
     }
   }
 
@@ -224,15 +226,20 @@ export class PlaywrightWorker {
       };
     }
 
-    const extracted = await extractAnswerResult(page, responseFormat, {
-      sendMs: 0,
-      generationMs: 0,
-    });
+    const extracted = await extractAnswerResult(
+      page,
+      responseFormat,
+      {
+        sendMs: 0,
+        generationMs: 0,
+      },
+      this.config.artifactsDir,
+    );
     if ("ok" in extracted && extracted.ok === false) {
       return {
         status: ThreadTaskStatus.ERROR,
         visibleChars,
-        error: extracted,
+        error: withActionLog(this.session, extracted),
         lastUiState: poll.uiState,
       };
     }
@@ -269,7 +276,7 @@ export class PlaywrightWorker {
       };
       return mapped;
     }
-    return extractAnswerResult(page, responseFormat, timings);
+    return extractAnswerResult(page, responseFormat, timings, this.config.artifactsDir);
   }
 
   async sendPromptAndWait(
@@ -298,25 +305,19 @@ export class PlaywrightWorker {
       await waitForCompletion(page, timeoutMs, this.config.artifactsDir);
       const generationMs = Date.now() - genStart;
 
-      const extractStart = Date.now();
-      const answer = await getLastAnswer(page, options.responseFormat ?? "markdown");
-      const extractMs = Date.now() - extractStart;
-
-      return {
-        threadId: undefined,
-        messageId: undefined,
-        status: "completed",
-        answerText: answer.text,
-        answerMarkdown: answer.markdown ?? answer.text,
-        sources: answer.sources,
-        timings: {
-          queueMs: 0,
+      const extracted = await extractAnswerResult(
+        page,
+        options.responseFormat ?? "markdown",
+        {
           sendMs,
           generationMs,
-          extractMs,
         },
-        artifacts: {},
-      };
+        this.config.artifactsDir,
+      );
+      if ("ok" in extracted && extracted.ok === false) {
+        return extracted;
+      }
+      return extracted;
     } catch (error) {
       if (typeof error === "object" && error !== null && "ok" in error) {
         return error as BrokerError;

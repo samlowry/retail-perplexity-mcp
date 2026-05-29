@@ -27,6 +27,10 @@ export interface ChatSubmitSuccess {
   ok: true;
   chatId: string;
   promptSuffixApplied?: boolean;
+  submitContext: {
+    submitModel: string | null;
+    submitReasoningEnabled: boolean | null;
+  };
 }
 
 export interface ThreadStatusSuccess {

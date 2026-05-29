@@ -54,8 +54,8 @@ Poll every few seconds. No broker job store or timeout — you decide when to st
 
 | Tool | Purpose |
 |------|---------|
-| `perplexity_submit_question` | Send question; returns `chat_id` |
-| `perplexity_get_answer` | Status + `result` / errors by `chat_id` |
+| `perplexity_submit_question` | Send question; returns `chat_id` + compose-form model fields |
+| `perplexity_get_answer` | Status + `result` / errors by `chat_id`; `prepared_using` when `completed` |
 
 Session bootstrap runs inside the broker; `session_id` is always `default` and is not exposed on MCP.
 
@@ -76,22 +76,39 @@ Session bootstrap runs inside the broker; `session_id` is always `default` and i
 
 ### Response JSON (text content)
 
-Submit success:
+Submit success (includes compose-form metadata; values may be `null` if the UI did not expose them):
 
 ```json
-{ "ok": true, "chat_id": "https://www.perplexity.ai/search/…", "status": "running" }
+{
+  "ok": true,
+  "mcp_version": "0.5.0",
+  "chat_id": "https://www.perplexity.ai/search/…",
+  "status": "running",
+  "submit_model": "GPT-5.4",
+  "submit_reasoning_enabled": null,
+  "prompt_suffix_applied": true,
+  "next_step": "Call perplexity_get_answer with this chat_id until completed."
+}
 ```
 
-Status while running:
+Status while running (no `prepared_using` yet):
 
 ```json
 { "ok": true, "chat_id": "https://…", "status": "running", "visible_chars": 1204 }
 ```
 
-Status when completed:
+Status when completed (`prepared_using` only here — not on `running` polls):
 
 ```json
-{ "ok": true, "chat_id": "https://…", "status": "completed", "result": "…", "timings_ms": { … } }
+{
+  "ok": true,
+  "chat_id": "https://…",
+  "status": "completed",
+  "result": "…",
+  "prepared_using": "GPT-5.4",
+  "sources": [],
+  "timings_ms": { "extract_ms": 120 }
+}
 ```
 
 Status when Perplexity/UI error:
@@ -108,4 +125,43 @@ Broker unreachable:
 
 `visible_chars` — length of answer text visible on the page (compare across polls for progress).
 
-HTTP: `/health`, `/chat/send`, `/thread/status` on the broker.
+### Model metadata fields
+
+| Field | When present | Meaning |
+|-------|----------------|---------|
+| `submit_model` | Submit response | Model label on the compose form at send time |
+| `submit_reasoning_enabled` | Submit response | Reasoning/thinking toggle at send (`true` / `false` / omitted if unknown) |
+| `prepared_using` | `get_answer` with `status: completed` only | Parsed from Perplexity’s “Prepared using …” attribution |
+
+Agents cannot set model or reasoning via MCP yet — read-only telemetry.
+
+## HTTP API (broker `:3317`)
+
+Same behavior as MCP; camelCase in JSON bodies:
+
+| Endpoint | Model-related response fields |
+|----------|-------------------------------|
+| `POST /chat/send` | `submitContext.submitModel`, `submitContext.submitReasoningEnabled` |
+| `POST /thread/status` | `answer.preparedUsing` when `status` is `completed` |
+
+Example `POST /chat/send` success:
+
+```json
+{
+  "ok": true,
+  "chatId": "https://www.perplexity.ai/search/…",
+  "submitContext": { "submitModel": "GPT-5.4", "submitReasoningEnabled": null }
+}
+```
+
+Example `POST /thread/status` when completed:
+
+```json
+{
+  "ok": true,
+  "status": "completed",
+  "answer": { "answerText": "…", "preparedUsing": "GPT-5.4", "sources": [] }
+}
+```
+
+Other routes: `/health`, `/session/ensure`. See [runbook.md](./runbook.md) and [acceptance.md](./acceptance.md).

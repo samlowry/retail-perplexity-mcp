@@ -5,35 +5,15 @@ import {
   BrokerNetworkError,
   BrokerRequestError,
   brokerFetch,
-  formatAnswer,
-  formatTimingsMs,
   parseBrokerErrorBody,
   toAgentErrorCode,
   type ChatSubmitSuccess,
   type ThreadStatusSuccess,
 } from "./broker-client.js";
+import { statusPayloadFromBroker, type AgentToolSuccess } from "./status-payload.js";
 import { MCP_VERSION } from "./version.js";
 
 const SESSION_ID = "default";
-
-/** MCP tools return JSON in text content. */
-type AgentToolSuccess = {
-  ok: true;
-  mcp_version: string;
-  chat_id: string;
-  status: "running" | "completed" | "error";
-  /** True when in-chat-only suffix was appended on submit (check mcp_version). */
-  prompt_suffix_applied?: boolean;
-  /** Required follow-up when status is running after submit. */
-  next_step?: string;
-  result?: string;
-  error_message?: string;
-  visible_chars?: number;
-  sources?: NonNullable<ThreadStatusSuccess["answer"]>["sources"];
-  timings_ms?: Record<string, number>;
-  code?: string;
-  last_ui_state?: string;
-};
 
 type AgentToolFailure = {
   ok: false;
@@ -79,49 +59,8 @@ function failureFromError(error: unknown, chatId?: string): AgentToolFailure {
   };
 }
 
-function statusPayloadFromBroker(
-  result: ThreadStatusSuccess,
-  format: "markdown" | "text",
-): AgentToolSuccess {
-  const base = {
-    ok: true as const,
-    mcp_version: MCP_VERSION,
-    chat_id: result.chatId,
-    visible_chars: result.visibleChars,
-    last_ui_state: result.lastUiState,
-  };
-
-  if (result.status === "running") {
-    return { ...base, status: "running" };
-  }
-
-  if (result.status === "error" && result.error) {
-    return {
-      ...base,
-      status: "error",
-      code: toAgentErrorCode(result.error.code),
-      error_message: result.error.message,
-    };
-  }
-
-  if (!result.answer) {
-    return {
-      ...base,
-      status: "error",
-      code: "FAILED",
-      error_message: "Completed without an answer payload",
-    };
-  }
-
-  return {
-    ...base,
-    status: "completed",
-    result: formatAnswer(result.answer, format),
-    sources: result.answer.sources?.length ? result.answer.sources : undefined,
-    timings_ms: formatTimingsMs(result.answer.timings),
-    visible_chars: result.answer.answerText.length,
-  };
-}
+const POLL_SCHEDULE_HINT =
+  "Poll perplexity_get_answer at 2, 3, 5, 10, 15, 20 min after submit (sleep between). visible_chars 0 for long stretches during reasoning is normal.";
 
 const questionSchema = z.string().min(1);
 const chatIdSchema = z.string().min(1).optional();
@@ -135,7 +74,7 @@ const server = new McpServer({
 
 server.tool(
   "perplexity_submit_question",
-  "Submit a question to Perplexity only — this tool does NOT return an answer. Put multiple numbered tasks in one question when the agent needs several research outputs (one poll, one result). Optional chat_id continues that chat; omit for a new topic. Returns chat_id and status running. Answers are INVALID until perplexity_get_answer returns status completed (or error). You MUST call perplexity_get_answer with this chat_id: first poll ~30s after submit, then every 60s up to 16 minutes. One in-flight request per session: overlapping submit/status calls return BUSY immediately (no queue). Do not edit publishable facts while running.",
+  `Submit a question to Perplexity only — does NOT return an answer. Returns chat_id, submit_model, submit_reasoning_enabled (compose form at send), status running. Call perplexity_get_answer until completed. ${POLL_SCHEDULE_HINT} One in-flight per session (BUSY on overlap).`,
   {
     question: questionSchema,
     chat_id: chatIdSchema,
@@ -163,8 +102,9 @@ server.tool(
         chat_id: result.chatId,
         status: "running",
         prompt_suffix_applied: result.promptSuffixApplied ?? false,
-        next_step:
-          "Call perplexity_get_answer with this chat_id. Wait ~30s before the first poll, then every 60s until status is completed or error (up to 16 min). Do not use submit output as research; result appears only after completed.",
+        submit_model: result.submitContext.submitModel,
+        submit_reasoning_enabled: result.submitContext.submitReasoningEnabled,
+        next_step: `Call perplexity_get_answer with this chat_id. ${POLL_SCHEDULE_HINT}`,
       });
     } catch (error) {
       return agentJsonContent(failureFromError(error, chat_id));
@@ -174,21 +114,23 @@ server.tool(
 
 server.tool(
   "perplexity_get_answer",
-  "Poll a submitted question by chat_id (from perplexity_submit_question). Opens/reloads the Perplexity thread. status running means no verified result yet — keep polling (~30s first check, then every 60s, up to 16 min). Complex multi-task briefs may run 10-15 min with visible_chars 0 or flat while Perplexity reasons; that is normal — keep polling. Only status completed includes trustworthy result; error ends the poll. Pack several numbered tasks into one submit question when possible; one in-flight request per session, overlaps return BUSY immediately (no queue).",
+  `Poll by chat_id. running = no result yet. completed includes result and prepared_using (from “Prepared using …”). ${POLL_SCHEDULE_HINT}`,
   {
     chat_id: chatIdRequiredSchema,
     format: formatSchema,
   },
   async ({ chat_id, format }) => {
     try {
-      const result = await brokerFetch<ThreadStatusSuccess>("/thread/status", {
-        method: "POST",
-        body: JSON.stringify({
-          sessionId: SESSION_ID,
-          chatId: chat_id,
-          responseFormat: format,
-        }),
-      });
+      const result = await brokerFetch<ThreadStatusSuccess>("/thread/status",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            sessionId: SESSION_ID,
+            chatId: chat_id,
+            responseFormat: format,
+          }),
+        },
+      );
 
       return agentJsonContent(statusPayloadFromBroker(result, format));
     } catch (error) {

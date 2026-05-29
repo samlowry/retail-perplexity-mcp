@@ -5,6 +5,7 @@ import { BrokerErrorCode, type BrokerError } from "@pdb/types";
 import type { WorkerConfig } from "./types.js";
 import { ActionLog } from "./action-log.js";
 import { launchBrowserContext } from "./browser-launch.js";
+import { relaunchContextIfDead } from "./recovery.js";
 
 export class BrowserSessionManager {
   private context: BrowserContext | null = null;
@@ -17,9 +18,14 @@ export class BrowserSessionManager {
     return this.page;
   }
 
+  getContext(): BrowserContext | null {
+    return this.context;
+  }
+
   async ensureSession(): Promise<{ loggedIn: boolean; error?: BrokerError }> {
     this.actionLog.record("browser.launch", this.config.browserEngine);
     await mkdir(this.config.profileDir, { recursive: true });
+    await relaunchContextIfDead(this);
 
     if (!this.context) {
       this.context = await launchBrowserContext(this.config);
@@ -58,6 +64,7 @@ export class BrowserSessionManager {
   async ensureBrowserReady(): Promise<{ ok: true } | { ok: false; error: BrokerError }> {
     this.actionLog.record("browser.launch", this.config.browserEngine);
     await mkdir(this.config.profileDir, { recursive: true });
+    await relaunchContextIfDead(this);
 
     if (!this.context) {
       this.context = await launchBrowserContext(this.config);

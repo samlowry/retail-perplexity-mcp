@@ -7,6 +7,24 @@
 3. Log in manually in the opened browser
 4. Re-run `pnpm doctor` — expect `perplexity_session: OK`
 
+## MCP response fields (model metadata)
+
+Read-only fields from the Perplexity UI (not configurable via API yet):
+
+- **Submit** (`perplexity_submit_question` / `POST /chat/send`): `submit_model`, `submit_reasoning_enabled` (MCP) or `submitContext` (HTTP).
+- **Completed poll** (`perplexity_get_answer` / `POST /thread/status`): `prepared_using` (MCP) or `answer.preparedUsing` (HTTP).
+
+Full examples: [mcp-cursor-setup.md](./mcp-cursor-setup.md).
+
+## CI / pre-flight check
+
+```bash
+pnpm build
+pnpm doctor --broker
+```
+
+`pnpm doctor` exits `0` when all checks pass, `1` when any fail — suitable for scripts and CI gates.
+
 ## Restart broker
 
 Start the broker from the **repository root**, or set **absolute** `PROFILE_DIR` / `ARTIFACTS_DIR` in `.env` (so profile cookies are found regardless of cwd).

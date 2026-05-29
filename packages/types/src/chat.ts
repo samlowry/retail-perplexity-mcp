@@ -34,6 +34,8 @@ export interface ChatAnswerResult {
   status: "completed" | "partial" | "failed";
   answerText: string;
   answerMarkdown?: string;
+  /** Parsed from “Prepared using …” near the answer (best-effort). */
+  preparedUsing: string | null;
   sources: Source[];
   timings: Timings;
   artifacts?: {

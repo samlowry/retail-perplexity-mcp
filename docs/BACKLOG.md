@@ -35,22 +35,20 @@ Local Node.js + Playwright broker: Cursor → MCP (thin) → HTTP broker → Pla
 
 ---
 
-## Epic L — Perplexity model & reasoning (P1 → P2)
+## Epic L — Model metadata (read-only, P1 done / P2 later)
 
-**Gap today:** no API to set or read active Perplexity **model** / **reasoning**; answers do not return which model was used. UI picker is best-effort in `packages/ui-selectors/src/model.ts` only.
+**Implemented (read-only):** `POST /chat/send` returns `submitContext` (`submitModel`, `submitReasoningEnabled`) from the compose form at send time. `POST /thread/status` when `completed` returns `answer.preparedUsing` parsed from the “Prepared using …” attribution line. MCP: `submit_model`, `submit_reasoning_enabled` on submit; `prepared_using` on completed poll only.
 
-| ID | Pri | Task | Package / path | Skills | Deps |
-|----|-----|------|----------------|--------|------|
-| L-01 | P1 | Map Perplexity UI: model picker, reasoning toggle (on/off), labels in DOM | `packages/ui-selectors/src/model.ts`, fixture HTML | `playwright-best-practices` | D-01 |
-| L-02 | P1 | `getModelSettings()` — return `{ model: string, reasoning: boolean }` from current page | `packages/playwright-worker/src/model.ts` | project skill | L-01, F-03 |
-| L-03 | P1 | `setModelSettings({ model, reasoning })` — apply before send when `ALLOW_MODEL_SWITCH=1` | `packages/playwright-worker/src/model.ts` | project skill | L-01, F-06 |
-| L-04 | P1 | Config/env defaults: `PERPLEXITY_MODEL`, `PERPLEXITY_REASONING` (install-time preference) | `packages/core/src/config.ts`, `.env.example` | project skill | L-03, C-01 |
-| L-05 | P1 | Doctor check: report configured vs detected model + reasoning | `apps/doctor/src/checks/model.ts` | project skill | L-02, H-03 |
-| L-06 | P1 | Extend answer payload: `model_used`, `reasoning_enabled` on every successful chat | `packages/types`, `extract` / `broker-service`, MCP `perplexity_ask` | `api-design-principles` | L-02, F-10 |
-| L-07 | P2 | HTTP: `GET /model/settings`, `POST /model/settings` (optional MCP params on `perplexity_ask`) | `apps/broker`, `apps/mcp-server` | `mcp-builder` | L-02, L-03, L-06 |
-| L-08 | P2 | Integration test `@live`: set model → send → assert `model_used` in response | `tests/integration/model.test.ts` | `playwright-best-practices` | L-06, T-07 |
+**Later (not in scope):** `setModelSettings`, env defaults, doctor model check, HTTP `/model/settings`, MCP `model`/`reasoning` params.
 
-**Acceptance:** agent can rely on `model_used` + `reasoning_enabled` in `perplexity_ask` success JSON; operator can set defaults via env and verify via doctor.
+| ID | Pri | Task | Status |
+|----|-----|------|--------|
+| L-01 | P1 | Selectors: form context + attribution parser | Done |
+| L-02 | P1 | Wire worker → broker → MCP | Done |
+| L-03 | P2 | `setModelSettings` + env defaults | Backlog |
+| L-04 | P2 | Doctor + HTTP model routes + MCP params | Backlog |
+
+**Note:** In-memory job FSM/store/idempotency removed; broker uses Perplexity thread URL as task id.
 
 ---
 

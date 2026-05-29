@@ -1,11 +1,15 @@
 import type { Page } from "playwright-core";
 import { detectUiState } from "@pdb/ui-state";
 import { UiState, type UiStateType } from "@pdb/ui-state";
-import { BrokerErrorCode, type BrokerError } from "@pdb/types";
-import type { ResponseFormatType } from "@pdb/types";
+import {
+  BrokerErrorCode,
+  type BrokerError,
+  type ChatAnswerResult,
+  type ResponseFormatType,
+} from "@pdb/types";
 import { getLastAnswer } from "./extract.js";
-import { getLastAnswerBlock } from "@pdb/ui-selectors";
-import type { ChatAnswerResult } from "@pdb/types";
+import { getLastAnswerBlock, extractPreparedUsing } from "@pdb/ui-selectors";
+import { captureArtifacts } from "./artifacts.js";
 
 export type GenerationPhase = "generating" | "finished";
 
@@ -143,10 +147,12 @@ export async function extractAnswerResult(
   page: Page,
   responseFormat: ResponseFormatType,
   timings: { sendMs: number; generationMs: number },
+  artifactsDir?: string,
 ): Promise<ChatAnswerResult | BrokerError> {
   const extractStart = Date.now();
   try {
     const answer = await getLastAnswer(page, responseFormat);
+    const preparedUsing = await extractPreparedUsing(page);
     const extractMs = Date.now() - extractStart;
     return {
       threadId: undefined,
@@ -154,6 +160,7 @@ export async function extractAnswerResult(
       status: "completed",
       answerText: answer.text,
       answerMarkdown: answer.markdown ?? answer.text,
+      preparedUsing,
       sources: answer.sources,
       timings: {
         queueMs: 0,
@@ -167,10 +174,17 @@ export async function extractAnswerResult(
     if (typeof error === "object" && error !== null && "ok" in error) {
       return error as BrokerError;
     }
+    const artifacts = artifactsDir
+      ? await captureArtifacts(page, artifactsDir, "extract-error")
+      : { screenshot: undefined, htmlSnapshot: undefined };
     return {
       ok: false,
       code: BrokerErrorCode.EXTRACTION_FAILED,
       message: error instanceof Error ? error.message : String(error),
+      artifacts: {
+        screenshot: artifacts.screenshot,
+        htmlSnapshot: artifacts.htmlSnapshot,
+      },
     };
   }
 }

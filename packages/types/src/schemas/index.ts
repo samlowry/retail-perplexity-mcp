@@ -32,7 +32,6 @@ export const threadStatusBodySchema = z.object({
 
 export const chatCancelBodySchema = z.object({
   sessionId: sessionIdSchema,
-  jobId: z.string().optional(),
 });
 
 export const attachmentUploadBodySchema = z.object({

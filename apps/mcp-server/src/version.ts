@@ -1,2 +1,2 @@
 /** MCP server package version (bump when tool behavior changes). */
-export const MCP_VERSION = "0.4.5";
+export const MCP_VERSION = "0.5.0";

@@ -8,6 +8,7 @@ import {
   type HealthResponse,
   type SessionEnsureResponse,
   type ThreadStatusResponse,
+  type SubmitFormContext,
   prepareSubmitPrompt,
 } from "@pdb/types";
 import { PlaywrightWorker } from "@pdb/playwright-worker";
@@ -63,7 +64,11 @@ export class BrokerService {
    */
   async submitChat(
     request: ChatSendRequest,
-  ): Promise<{ chatId: string; promptSuffixApplied: boolean } | { error: BrokerError }> {
+  ): Promise<
+    { chatId: string; promptSuffixApplied: boolean; submitContext: SubmitFormContext } | {
+      error: BrokerError;
+    }
+  > {
     try {
       const threadUrl = request.chatId ? normalizeChatId(request.chatId) : undefined;
       const prepared = prepareSubmitPrompt(request.text);
@@ -76,7 +81,11 @@ export class BrokerService {
         return { error: result };
       }
 
-      return { chatId: result.threadUrl, promptSuffixApplied: prepared.suffixApplied };
+      return {
+        chatId: result.threadUrl,
+        promptSuffixApplied: prepared.suffixApplied,
+        submitContext: result.submitContext,
+      };
     } catch (error) {
       return { error: this.errorFromThrown(error) };
     }
