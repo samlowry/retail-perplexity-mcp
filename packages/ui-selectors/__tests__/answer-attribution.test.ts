@@ -15,4 +15,8 @@ describe("parsePreparedUsingFromText", () => {
   it("returns null when line is missing", () => {
     expect(parsePreparedUsingFromText("No attribution here")).toBeNull();
   });
+
+  it("returns null when only whitespace follows prefix (no backtracking blow-up)", () => {
+    expect(parsePreparedUsingFromText(`Prepared using ${" ".repeat(500)}`)).toBeNull();
+  });
 });

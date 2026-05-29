@@ -1,7 +1,7 @@
 import type { Page } from "playwright";
 
-const PREPARED_USING_RE =
-  /Prepared\s+using\s+(.+?)(?:\s*[·•|]\s*|$)/i;
+/** Linear-time match: model name excludes separators and newlines (no lazy `.+?` + `\s*`). */
+const PREPARED_USING_RE = /Prepared\s+using\s+([^·•|\n]+)/i;
 
 /**
  * Parse model label from a “Prepared using …” attribution string (unit-testable).
