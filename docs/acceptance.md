@@ -8,6 +8,7 @@ For each run `1..10`:
 - [ ] `POST /chat/send` without `chatId`, short prompt → `ok: true`, `chatId`, `submitContext` object
 - [ ] `submitContext.submitModel` or `submitReasoningEnabled` present when Perplexity shows them (may be `null`)
 - [ ] `POST /thread/status` with that URL as `chatId` until `status: completed`, non-empty `answer`
+- [ ] Second `POST /thread/status` on same `chatId` while tab stays open still returns sensible status (poll reloads page)
 - [ ] On completed, `answer.preparedUsing` is a string or `null` (not required on `running` polls)
 - [ ] `POST /chat/send` with `chatId` (slug) → follow-up in same thread
 - [ ] Response includes `timings`

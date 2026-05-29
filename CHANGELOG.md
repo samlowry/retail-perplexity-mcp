@@ -11,6 +11,7 @@ and this project follows semantic versioning intent while pre-1.0 changes may in
 
 - MCP exposes only `perplexity_submit_question` and `perplexity_get_answer` (removed `perplexity_broker_info`).
 - MCP tools call the broker directly without a preflight `/health` check (`BROKER_OFFLINE` on connection failure).
+- Status poll (`perplexity_get_answer` / `POST /thread/status`) reloads the thread tab when already on that URL; follow-up submit does not reload on the same URL.
 
 ### Added
 

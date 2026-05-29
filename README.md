@@ -92,6 +92,8 @@ The two-step tool contract:
 
 Concurrency model: one in-flight request per session. If another request overlaps, broker returns `BUSY` immediately (no FIFO queue). Keep polling the original `chat_id`.
 
+Status polls reload the thread tab when it is already open (fixes frozen Perplexity UI); follow-up submits in the same thread do not reload. Details: [docs/mcp-cursor-setup.md](docs/mcp-cursor-setup.md).
+
 ## Agent skill: how to use it correctly
 
 The project ships with a dedicated Cursor skill:

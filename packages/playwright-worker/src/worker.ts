@@ -15,6 +15,7 @@ import {
   measureVisibleAnswerChars,
   openThreadUrl,
   pollGenerationPhase,
+  ThreadOpenPolicy,
 } from "./generation.js";
 import { ThreadTaskStatus, type ThreadTaskStatusType } from "@pdb/types";
 import { getLastAnswer } from "./extract.js";
@@ -77,7 +78,7 @@ export class PlaywrightWorker {
             message: "No browser page",
           };
         }
-        await openThreadUrl(page, options.threadUrl, { reloadIfActive: false });
+        await openThreadUrl(page, options.threadUrl, ThreadOpenPolicy.FollowUpSubmit);
         const auth = await checkAuthState(page);
         if (!auth.loggedIn) {
           return {
@@ -162,7 +163,7 @@ export class PlaywrightWorker {
     }
 
     if (threadUrl) {
-      await openThreadUrl(page, threadUrl, { reloadIfActive: false });
+      await openThreadUrl(page, threadUrl, ThreadOpenPolicy.StatusPoll);
     }
 
     const poll = await pollGenerationPhase(page);
@@ -198,12 +199,8 @@ export class PlaywrightWorker {
       };
     }
 
-    await openThreadUrl(page, threadUrl, { reloadIfActive: false });
-    let poll = await pollGenerationPhase(page);
-    if (poll.uiState === UiState.UNKNOWN) {
-      await openThreadUrl(page, threadUrl, { reloadIfActive: true });
-      poll = await pollGenerationPhase(page);
-    }
+    await openThreadUrl(page, threadUrl, ThreadOpenPolicy.StatusPoll);
+    const poll = await pollGenerationPhase(page);
 
     const generating =
       poll.phase === "generating" || (await isGenerationActive(page));

@@ -164,4 +164,14 @@ Example `POST /thread/status` when completed:
 }
 ```
 
+### Thread navigation (browser)
+
+| Action | Tab already on this `chat_id` | Tab on another page |
+|--------|------------------------------|---------------------|
+| `POST /thread/status` (poll) | **Full reload** (unfreeze stuck Perplexity UI) | `goto` thread URL |
+| `POST /chat/send` with `chatId` (follow-up) | **No reload** — send in live DOM | `goto` thread URL |
+| `POST /chat/send` without `chatId` (new topic) | N/A — broker opens home and starts a new thread | |
+
+Maintainer rationale: [internal/thread-navigation.md](./internal/thread-navigation.md).
+
 Other routes: `/health`, `/session/ensure`. See [runbook.md](./runbook.md) and [acceptance.md](./acceptance.md).

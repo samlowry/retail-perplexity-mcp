@@ -6,6 +6,8 @@ Local Node.js + Playwright broker: Cursor → MCP (thin) → HTTP broker → Pla
 
 **Session invariant:** one profile, one active tab, one in-flight generation per `session_id`; overlapping requests are rejected as BUSY (no queue), never race the same tab.
 
+**Navigation policy:** three cases (new topic, follow-up submit, status poll) — when to `goto` vs `reload` on an open thread tab. Maintainer doc: [docs/internal/thread-navigation.md](./internal/thread-navigation.md).
+
 ---
 
 ## Skill map (apply when implementing)
